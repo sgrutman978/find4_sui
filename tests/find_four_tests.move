@@ -17,7 +17,7 @@
 //     #[test, expected_failure(abort_code = ::my_first_package::my_first_package_tests::ENotImplemented)]
 //     fun test_my_first_package_fail() {
 //         abort ENotImplemented
-//     }
+//     }  
 // }
 
 #[test_only]
