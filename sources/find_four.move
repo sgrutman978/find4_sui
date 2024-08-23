@@ -37,13 +37,14 @@ module find_four::find_four_game {
     }
 
     // Initialize a new game
-    public fun initialize_game(ctx: &mut TxContext): GameBoard {
-        GameBoard {
+    public fun initialize_game(ctx: &mut TxContext) {
+        let game = GameBoard {
             id: object::new(ctx),
             board: create_empty_board(),
             current_player: P1,
             is_game_over: false,
-        }
+        };
+        transfer::share_object(game);
     } 
 
         public fun change_nth_element(mut v: vector<u64>, n: u64, new_value: u64) {
