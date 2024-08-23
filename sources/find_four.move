@@ -1,4 +1,5 @@
 module find_four::find_four_game {
+    use std::debug;
 
     // Enums for representing the players and board slots
     // public enum Player {
@@ -52,13 +53,29 @@ module find_four::find_four_game {
         *elem_ref = new_value;
     }
 
+    public fun print_board(game: &mut GameBoard) {
+        // debug::print(&game.board);
+        // needs to be printed upside down
+        let mut row = 5;
+        while (row >= 0) {
+            debug::print(&game.board[row]);
+            if (row == 0){
+                break;
+            };
+            row = row - 1;
+        }
+    }
+
         // Drop a disc into a column
-    public fun drop_disc(game: &mut GameBoard, column: u64) {
+    fun drop_disc(game: &mut GameBoard, column: u64) {
         assert!(column < 7, 0);
+        debug::print(&b"jsjsjsj");
         let mut row = 0;
         while (row < 6) {
             if (game.board[row][column] == EMPTY) {
-                change_nth_element(game.board[row], column, game.current_player);
+                change_element(&mut game.board, row, column, game.current_player);
+                // change_nth_element(game.board[row], column, game.current_player);
+                debug::print(&b"jsj");
                 if (check_for_win(&game.board, game.current_player)) {
                     game.is_game_over = true;
                 };
@@ -72,6 +89,18 @@ module find_four::find_four_game {
             row = row + 1;
         };
         // abort!(1); // Column is full
+    }
+
+      fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
+        // Borrow the inner vector at index `i` from the outer vector `matrix`
+        let inner_vec = vector::borrow_mut(matrix, i);
+
+        // Borrow the element at index `j` in the `inner_vec` and update it
+        *vector::borrow_mut(inner_vec, j) = new_value;
+    }
+
+    public fun check_for_win_in_tests(game: &mut GameBoard, player: u64): bool{
+        check_for_win(&game.board, player)
     }
 
     // Check for a win (simplified for brevity)
@@ -174,6 +203,7 @@ module find_four::find_four_game {
         // Function for a human player to make a move
     public fun player_move(game: &mut GameBoard, column: u64) {
         assert!(!game.is_game_over, 0);
+        debug::print(&b"mehhhhhh");
         drop_disc(game, column);
     }
 
