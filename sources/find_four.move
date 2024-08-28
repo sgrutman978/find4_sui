@@ -17,6 +17,8 @@ module find_four::find_four_game {
         board: vector<vector<u64>>, // 6 rows by 7 columns
         current_player: u64,
         is_game_over: bool,
+        p1: address,
+        p2: address
     }
 
     // Helper function to create an empty board
@@ -37,12 +39,14 @@ module find_four::find_four_game {
     }
 
     // Initialize a new game
-    public fun initialize_game(ctx: &mut TxContext) {
+    public fun initialize_game(p2: address, ctx: &mut TxContext) {
         let game = GameBoard {
             id: object::new(ctx),
             board: create_empty_board(),
             current_player: P1,
             is_game_over: false,
+            p1: ctx.sender(),
+            p2: p2
         };
         transfer::share_object(game);
     } 
@@ -61,7 +65,7 @@ module find_four::find_four_game {
         while (row >= 0) {
             debug::print(&game.board[row]);
             if (row == 0){
-                break;
+                break
             };
             row = row - 1;
         }
@@ -92,7 +96,7 @@ module find_four::find_four_game {
         // abort!(1); // Column is full
     }
 
-      fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
+    fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
         // Borrow the inner vector at index `i` from the outer vector `matrix`
         let inner_vec = vector::borrow_mut(matrix, i);
 
@@ -202,9 +206,10 @@ module find_four::find_four_game {
     }
 
         // Function for a human player to make a move
-    public fun player_move(game: &mut GameBoard, column: u64) {
+    public fun player_move(game: &mut GameBoard, column: u64, ctx: &mut TxContext) {
         assert!(!game.is_game_over, 0);
         debug::print(&b"mehhhhhh");
+        assert!((game.current_player == P1 && ctx.sender() == game.p1) || (game.current_player == P2 && ctx.sender() == game.p2), 1);
         drop_disc(game, column);
     }
 
