@@ -1,7 +1,7 @@
 [package]
 name = "find_four"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
-published-at = "0x0a0d1ae008c27416d34b5f1356818051957e06c644acc17a11a54d0abcaa9fc8"
+published-at = "0x0ab1df6b005fa2731b2d571aec358e3dbd1a9426410825ec217ecf03587587cb"
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
 

@@ -38,7 +38,7 @@ fun test_game() {
 
     let mut scenario_val = test_scenario::begin(P1_addy);
     let scenario = &mut scenario_val;
-    initialize_game(P2_addy, scenario.ctx());
+    // initialize_game(P2_addy, scenario.ctx());
     scenario.next_tx(P1_addy);
         {
             let mut game_val = scenario.take_shared<GameBoard>();
@@ -57,7 +57,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario: &mut Scenario = &mut scenario_val;
-        initialize_game(P2_addy, scenario.ctx());
+        // initialize_game(P2_addy, scenario.ctx());
 
         // Simulate a horizontal win for Player 1
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -87,7 +87,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        initialize_game(P2_addy, scenario.ctx());
+        // initialize_game(P2_addy, scenario.ctx());
 
         // Simulate a vertical win for Player 2
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -118,7 +118,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        initialize_game(P2_addy, scenario.ctx());
+        // initialize_game(P2_addy, scenario.ctx());
 
             // Simulate a diagonal win for Player 1
         make_player_move_for_tests(scenario, 0, P1_addy);
