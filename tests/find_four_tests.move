@@ -146,6 +146,26 @@ fun test_game() {
         scenario_val.end();
     }
 
+    //     #[test]
+    // public fun test_check_rewards() {
+    //     // Initialize a new game
+    //     let mut scenario_val = test_scenario::begin(P1_addy);
+    //     let scenario = &mut scenario_val;
+    //     // initialize_game(P2_addy, scenario.ctx());
+
+    //     scenario.next_tx(P1_addy);
+    //     {
+    //         let mut game_val = scenario.take_shared<GameBoard>();
+    //         let game = &mut game_val;
+    //         print_board(game);
+    //         // Check for a win
+    //         let has_won = check_for_win_in_tests(game, 1);
+    //         assert!(has_won, 1);
+    //         test_scenario::return_shared(game_val);
+    //     };
+    //     scenario_val.end();
+    // }
+
     fun make_player_move_for_tests(scenario: &mut Scenario, column: u64, player_addy: address) {
         scenario.next_tx(player_addy);
         {
