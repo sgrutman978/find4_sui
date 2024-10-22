@@ -1,7 +1,7 @@
 module find_four::multi_player {
 
     use sui::event;
-    use find_four::find_four_game::{initialize_game};
+    use find_four::find_four_game::{initialize_game, GameBoard, player_move};
 
     // Event to notify a successful pairing
     public struct PairingEvent has copy, drop, store {
@@ -34,6 +34,10 @@ module find_four::multi_player {
             tmp: 9,
             users: vector::empty<address>(),
         }
+    }
+
+    public fun player_make_move(game: &mut GameBoard, column: u64, ctx: &mut TxContext) {
+        player_move(game, column, ctx);
     }
 
     // Function to attempt pairing users and/or create a new multiplayer game

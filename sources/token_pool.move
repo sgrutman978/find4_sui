@@ -32,8 +32,8 @@ module find_four::FFIO {
 
     fun init(witness: FFIO, ctx: &mut TxContext) {
         let (mut treasury, metadata) = coin::create_currency(witness, 6, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.shutterstock.com/image-photo/game-4-row-yellow-red-600nw-2233654429.jpg")), ctx);
-        let trea = &mut treasury;
-        mint_ffio(trea, 100, ctx.sender(), ctx);
+        // let trea = &mut treasury;
+        // mint_ffio(trea, 100, ctx.sender(), ctx);
         let init_coin = coin::mint<FFIO>(&mut treasury, 100, ctx);
         let mut coins = vector::empty<Coin<FFIO>>();
         vector::push_back(&mut coins, init_coin);
@@ -53,7 +53,7 @@ module find_four::FFIO {
     }
 
     /// Creates a new reward account
-    public fun create_reward_account(ctx: &mut TxContext) {
+    public(package) fun create_reward_account(ctx: &mut TxContext) {
         let reward_account = RewardAccount {
             id: object::new(ctx),
             rewards: vector::empty<TokenReward>(),
@@ -62,7 +62,7 @@ module find_four::FFIO {
     }
 
     /// Creates a pool for holding tokens that will be used to reward players
-    public fun create_reward_pool(coins: vector<Coin<find_four::FFIO::FFIO>>, ctx: &mut TxContext) {
+    fun create_reward_pool(coins: vector<Coin<find_four::FFIO::FFIO>>, ctx: &mut TxContext) {
         let reward_pool = RewardPool {
             id: object::new(ctx),
             coins,  // The coins passed in are stored in the pool
@@ -84,7 +84,7 @@ module find_four::FFIO {
     }
 
     /// Automatically adds a reward when a player wins a game, drawing from the reward pool
-    public fun reward_winner(
+    public(package) fun reward_winner(
         pool: &mut RewardPool, 
         account: &mut RewardAccount,
         amount: u64
@@ -97,34 +97,7 @@ module find_four::FFIO {
             claimed: false,
         };
 
-        // Add reward to the player's account
-       
-            // let mut rewards = vector::empty<TokenReward>();
-            // vector::push_back(&mut rewards, reward);
-            // add(&mut account.rewards, rewards);
-            // let rewards = vector::borrow_mut(&mut account.rewards);
-            vector::push_back(&mut account.rewards, reward);
-
-        // Deduct the reward from the pool by splitting coins
-        // let mut remaining_amount = amount;
-        // let mut i = 0;
-        // while (remaining_amount > 0) {
-        //     let coin = vector::borrow_mut(&mut pool.coins, i);
-        //     let coin_value = value(coin);
-
-        //     if (coin_value <= remaining_amount) {
-        //         remaining_amount = remaining_amount - coin_value;
-        //         // Transfer full coin
-        //         vector::remove(&mut pool.coins, i);
-        //     } else {
-        //         let remaining_coin = split(coin, remaining_amount, ctx);
-        //         remaining_amount = 0;
-        //         // Replace original coin with remaining coin
-        //         vector::remove(&mut pool.coins, i);
-        //         vector::push_back(&mut pool.coins, remaining_coin);
-        //     };
-        //     i = i + 1;
-        // };
+        vector::push_back(&mut account.rewards, reward);
     }
 
     /// Player claims a specific reward from their account
@@ -149,37 +122,15 @@ module find_four::FFIO {
         while (remaining_amount > 0) {
             let coinr = vector::borrow_mut(&mut pool.coins, i);
             let coin_value = coinr.value();
-
-            // if (coin_value <= remaining_amount) {
-            //     remaining_amount = remaining_amount - coin_value;
-            //     transfer::transfer(*coin, player);  // Transfer full coin
-            //     vector::remove(&mut pool.coins, i);
-            // } else {
-            //     let (claim_coin, remaining_coin) = split(coin, remaining_amount, ctx);
-            //     remaining_amount = 0;
-            //     transfer(claim_coin, player);  // Transfer the reward portion
-            //     // Replace original coin with remaining balance
-            //     vector::remove(&mut pool.coins, i);
-            //     vector::push_back(&mut pool.coins, remaining_coin);
-            // };
             if (coin_value <= remaining_amount) {
                 remaining_amount = remaining_amount - coin_value;
                 // Transfer full coin
-                // let tcoin = vector::
-                // let coin_option = vector::borrow_mut(&mut pool.coins, index);
-                // let coin = option::take(coin_option).unwrap();
-                // let coinr2 = vector::remove(&mut pool.coins, i);
-                // let n = coin::
                 let new_coin = coin::split(coinr, coin_value, ctx);
                 transfer::public_transfer(new_coin, ctx.sender());
             } else {
-                // let cc = &mut coinr;
                 let new_coin = coin::split(coinr, remaining_amount, ctx);
                 remaining_amount = 0;
                 // Replace original coin with remaining coin
-                // vector::remove(&mut pool.coins, i);
-                // vector::push_back(&mut pool.coins, coinr);
-                // let coinr2 = vector::remove(&mut pool.coins, i);
                 transfer::public_transfer(new_coin, ctx.sender());
             };
             i = i + 1;

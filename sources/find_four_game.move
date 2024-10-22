@@ -15,7 +15,7 @@ module find_four::find_four_game {
         is_game_over: bool,
         p1: address,
         p2: address,
-        gameType: u64 // 1 = against AI, 2 = multiplayer
+        gameType: u64 // 1 = against AI (singleplayer), 2 = multiplayer
     }
 
     public fun getBoard(game: &mut GameBoard): vector<vector<u64>>{
@@ -59,7 +59,7 @@ module find_four::find_four_game {
     }
 
     // Helper function to create an empty board
-    fun create_empty_board(): vector<vector<u64>> {
+    public(package) fun create_empty_board(): vector<vector<u64>> {
         let mut board = vector::empty<vector<u64>>();
         let mut r: u64 = 0;
         while (r < 6) {
@@ -118,7 +118,7 @@ module find_four::find_four_game {
         // abort!(1); // Column is full
     }
 
-    fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
+    public fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
         // Borrow the inner vector at index `i` from the outer vector `matrix`
         let inner_vec = vector::borrow_mut(matrix, i);
         // Borrow the element at index `j` in the `inner_vec` and update it

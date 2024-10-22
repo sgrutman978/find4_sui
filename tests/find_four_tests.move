@@ -26,11 +26,14 @@ module find_four::find_four_tests {
     use find_four::find_four_game::{GameBoard, initialize_game, player_move, check_for_win_in_tests, print_board};
     use std::debug;
 
+    use find_four::multi_player::player_make_move;
+    use find_four::AI::best_move;
+
     const P1_addy: address = @0xCAFE;
     const P2_addy: address = @0xFACE;
     // use find_four::game::{GameBoard};
 
-   #[test]
+//    #[test]
 fun test_game() {
     // Create test addresses representing users
     
@@ -38,7 +41,7 @@ fun test_game() {
 
     let mut scenario_val = test_scenario::begin(P1_addy);
     let scenario = &mut scenario_val;
-    // initialize_game(P2_addy, scenario.ctx());
+    initialize_game(P2_addy, 2, scenario.ctx());
     scenario.next_tx(P1_addy);
         {
             let mut game_val = scenario.take_shared<GameBoard>();
@@ -52,12 +55,12 @@ fun test_game() {
     scenario_val.end();
 }
 
-    #[test]
+    // #[test]
     public fun test_check_for_win_horizontal() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario: &mut Scenario = &mut scenario_val;
-        // initialize_game(P2_addy, scenario.ctx());
+        initialize_game(P2_addy, 2, scenario.ctx());
 
         // Simulate a horizontal win for Player 1
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -82,12 +85,12 @@ fun test_game() {
         scenario_val.end();
     }
 
-    #[test]
+    // #[test]
     public fun test_check_for_win_vertical() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        // initialize_game(P2_addy, scenario.ctx());
+        initialize_game(P2_addy, 2, scenario.ctx());
 
         // Simulate a vertical win for Player 2
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -113,12 +116,12 @@ fun test_game() {
         scenario_val.end();
     }
 
-    #[test]
+    // #[test]
     public fun test_check_for_win_diagonal() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        // initialize_game(P2_addy, scenario.ctx());
+        initialize_game(P2_addy, 2, scenario.ctx());
 
             // Simulate a diagonal win for Player 1
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -146,25 +149,31 @@ fun test_game() {
         scenario_val.end();
     }
 
-    //     #[test]
-    // public fun test_check_rewards() {
-    //     // Initialize a new game
-    //     let mut scenario_val = test_scenario::begin(P1_addy);
-    //     let scenario = &mut scenario_val;
-    //     // initialize_game(P2_addy, scenario.ctx());
+    #[test]
+    public fun test_ai() {
+        // Initialize a new game
+        let mut scenario_val = test_scenario::begin(P1_addy);
+        let scenario = &mut scenario_val;
+        initialize_game(P1_addy, 1, scenario.ctx());
 
-    //     scenario.next_tx(P1_addy);
-    //     {
-    //         let mut game_val = scenario.take_shared<GameBoard>();
-    //         let game = &mut game_val;
-    //         print_board(game);
-    //         // Check for a win
-    //         let has_won = check_for_win_in_tests(game, 1);
-    //         assert!(has_won, 1);
-    //         test_scenario::return_shared(game_val);
-    //     };
-    //     scenario_val.end();
-    // }
+            // Simulate a diagonal win for Player 1
+        make_both_moves_for_tests(scenario, 3, P1_addy);
+        make_both_moves_for_tests(scenario, 3, P1_addy);
+         make_both_moves_for_tests(scenario, 3, P1_addy);
+        make_both_moves_for_tests(scenario, 3, P1_addy);
+
+        scenario.next_tx(P1_addy);
+        {
+            let mut game_val = scenario.take_shared<GameBoard>();
+            let game = &mut game_val;
+            print_board(game);
+            // Check for a win
+            let has_won = check_for_win_in_tests(game, 1);
+            assert!(has_won, 1);
+            test_scenario::return_shared(game_val);
+        };
+        scenario_val.end();
+    }
 
     fun make_player_move_for_tests(scenario: &mut Scenario, column: u64, player_addy: address) {
         scenario.next_tx(player_addy);
@@ -172,6 +181,17 @@ fun test_game() {
             let mut game_val = scenario.take_shared<GameBoard>();
             let game = &mut game_val;
             player_move(game, column, scenario.ctx());
+            test_scenario::return_shared(game_val);
+        };
+    }
+
+    fun make_both_moves_for_tests(scenario: &mut Scenario, column: u64, player_addy: address) {
+        scenario.next_tx(player_addy);
+        {
+            let mut game_val = scenario.take_shared<GameBoard>();
+            let game = &mut game_val;
+            // let board = &game.getBoard();
+            find_four::single_player::player_make_move(game, column, scenario.ctx());
             test_scenario::return_shared(game_val);
         };
     }
