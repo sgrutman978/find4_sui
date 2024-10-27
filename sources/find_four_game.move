@@ -1,6 +1,6 @@
 module find_four::find_four_game {
     use std::debug;
-    use sui::event;
+    // use sui::event;
     // use find_four::multiplayer::{}
 
     const EMPTY: u64 = 0;
@@ -15,11 +15,20 @@ module find_four::find_four_game {
         is_game_over: bool,
         p1: address,
         p2: address,
-        gameType: u64 // 1 = against AI (singleplayer), 2 = multiplayer
+        gameType: u64, // 1 = against AI (singleplayer), 2 = multiplayer
+        nonce: u64
     }
 
     public fun getBoard(game: &mut GameBoard): vector<vector<u64>>{
         game.board
+    }
+
+    public fun getNonce(game: &mut GameBoard): u64 {
+        game.nonce
+    }
+
+    public fun incrementNonce(game: &mut GameBoard) {
+        game.nonce = game.nonce + 1;
     }
 
     public fun getGameId(game: &mut GameBoard): address {
@@ -51,6 +60,11 @@ module find_four::find_four_game {
     public(package) fun player_move(game: &mut GameBoard, column: u64, ctx: &mut TxContext) {
         assert!(!game.is_game_over, 0);
         assert!((game.current_player == P1 && ctx.sender() == game.p1) || (game.current_player == P2 && ctx.sender() == game.p2), 1);
+        drop_disc(game, column);
+    }
+
+    public(package) fun ai_move(game: &mut GameBoard, column: u64) {
+        assert!(!game.is_game_over, 0);
         drop_disc(game, column);
     }
 
@@ -86,8 +100,8 @@ module find_four::find_four_game {
             is_game_over: false,
             p1: ctx.sender(),
             p2: p2,
-            gameType: gameType
-
+            gameType: gameType,
+            nonce: 0
         };
         transfer::share_object(game);
         game_addy

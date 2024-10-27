@@ -1,6 +1,6 @@
 module find_four::FFIO {
     use sui::coin::{Self, Coin, value, TreasuryCap};
-    use sui::table::{new, add, contains, borrow_mut};
+    // use sui::table::{new, add, contains, borrow_mut};
     use sui::url::Url;
 
     const REWARD_ALREADY_CLAIMED: u64 = 6; 
