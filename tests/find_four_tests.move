@@ -23,15 +23,27 @@
 #[test_only]
 module find_four::find_four_tests {
     use sui::test_scenario::{Self, Scenario};
-    use find_four::find_four_game::{GameBoard, initialize_game, player_move, check_for_win_in_tests, print_board};
+    use find_four::find_four_game::{GameBoard, initialize_game, player_move, check_for_win_in_tests};
     use std::debug;
 
     use find_four::multi_player::player_make_move;
-    use find_four::AI::best_move;
 
     const P1_addy: address = @0xCAFE;
     const P2_addy: address = @0xFACE;
     // use find_four::game::{GameBoard};
+
+    public fun print_board(game: &mut GameBoard) {
+        // debug::print(&game.board);
+        // needs to be printed upside down
+        let mut row = 5;
+        while (row >= 0) {
+            debug::print(&game.getBoard()[row]);
+            if (row == 0){
+                break
+            };
+            row = row - 1;
+        }
+    }
 
 //    #[test]
 fun test_game() {
@@ -41,7 +53,7 @@ fun test_game() {
 
     let mut scenario_val = test_scenario::begin(P1_addy);
     let scenario = &mut scenario_val;
-    initialize_game(P2_addy, 2, scenario.ctx());
+    initialize_game(P2_addy, 2, 0, @0xFFFFF, scenario.ctx());
     scenario.next_tx(P1_addy);
         {
             let mut game_val = scenario.take_shared<GameBoard>();
@@ -60,7 +72,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario: &mut Scenario = &mut scenario_val;
-        initialize_game(P2_addy, 2, scenario.ctx());
+        initialize_game(P2_addy, 2, 0, @0xFFFFF, scenario.ctx());
 
         // Simulate a horizontal win for Player 1
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -90,7 +102,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        initialize_game(P2_addy, 2, scenario.ctx());
+        initialize_game(P2_addy, 2, 0, @0xFFFFF, scenario.ctx());
 
         // Simulate a vertical win for Player 2
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -121,7 +133,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        initialize_game(P2_addy, 2, scenario.ctx());
+        initialize_game(P2_addy, 2, 0, @0xFFFFF, scenario.ctx());
 
             // Simulate a diagonal win for Player 1
         make_player_move_for_tests(scenario, 0, P1_addy);
@@ -154,7 +166,7 @@ fun test_game() {
         // Initialize a new game
         let mut scenario_val = test_scenario::begin(P1_addy);
         let scenario = &mut scenario_val;
-        initialize_game(P1_addy, 1, scenario.ctx());
+        initialize_game(P1_addy, 1, 0, @0xFFFFF, scenario.ctx());
 
             // Simulate a diagonal win for Player 1
         make_both_moves_for_tests(scenario, 3, P1_addy);

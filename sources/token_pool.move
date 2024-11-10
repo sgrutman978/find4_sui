@@ -1,6 +1,5 @@
 module find_four::FFIO {
     use sui::coin::{Self, Coin, value, TreasuryCap};
-    // use sui::table::{new, add, contains, borrow_mut};
     use sui::url::Url;
 
     const REWARD_ALREADY_CLAIMED: u64 = 6; 
@@ -31,10 +30,10 @@ module find_four::FFIO {
     }
 
     fun init(witness: FFIO, ctx: &mut TxContext) {
-        let (mut treasury, metadata) = coin::create_currency(witness, 6, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.shutterstock.com/image-photo/game-4-row-yellow-red-600nw-2233654429.jpg")), ctx);
+        let (mut treasury, metadata) = coin::create_currency(witness, 6, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.find4.io/f4-42.png")), ctx);
         // let trea = &mut treasury;
         // mint_ffio(trea, 100, ctx.sender(), ctx);
-        let init_coin = coin::mint<FFIO>(&mut treasury, 100, ctx);
+        let init_coin = coin::mint<FFIO>(&mut treasury, 18000000000, ctx);
         let mut coins = vector::empty<Coin<FFIO>>();
         vector::push_back(&mut coins, init_coin);
         create_reward_pool(coins, ctx);
@@ -42,23 +41,23 @@ module find_four::FFIO {
         transfer::public_transfer(treasury, ctx.sender());
     }
 
-    public(package) fun mint_ffio(
-        treasury_cap: &mut TreasuryCap<FFIO>, 
-        amount: u64, 
-        recipient: address, 
-        ctx: &mut TxContext,
-    ) {
-        let coin = coin::mint(treasury_cap, amount, ctx);
-        transfer::public_transfer(coin, recipient);
-    }
+    // public(package) fun mint_ffio(
+    //     treasury_cap: &mut TreasuryCap<FFIO>, 
+    //     amount: u64, 
+    //     recipient: address, 
+    //     ctx: &mut TxContext,
+    // ) {
+    //     let coin = coin::mint(treasury_cap, amount, ctx);
+    //     transfer::public_transfer(coin, recipient);
+    // }
 
     /// Creates a new reward account
-    public(package) fun create_reward_account(ctx: &mut TxContext) {
+    public(package) fun create_reward_account(ctx: &mut TxContext): RewardAccount {
         let reward_account = RewardAccount {
             id: object::new(ctx),
             rewards: vector::empty<TokenReward>(),
         };
-        transfer::public_transfer(reward_account, ctx.sender());
+        reward_account
     }
 
     /// Creates a pool for holding tokens that will be used to reward players

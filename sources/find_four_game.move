@@ -1,11 +1,13 @@
 module find_four::find_four_game {
     use std::debug;
-    // use sui::event;
+    use sui::event;
+    use find_four::profile_and_rank::{PointsObj};
     // use find_four::multiplayer::{}
 
     const EMPTY: u64 = 0;
     const P1: u64 = 1;
     const P2: u64 = 2;
+    const CURRENT_GAME_VERSION: u64 = 1;
 
     // Struct for representing the game board
     public struct GameBoard has key, store {
@@ -16,7 +18,26 @@ module find_four::find_four_game {
         p1: address,
         p2: address,
         gameType: u64, // 1 = against AI (singleplayer), 2 = multiplayer
-        nonce: u64
+        nonce: u64,
+        version: u64,
+        winner: u64,
+        winningHandled: bool,
+        pointsObjAddy1: address,
+        pointsObjAddy2: address,
+        points1: u64,
+        points2: u64
+    }
+
+    public struct TimerRanOutEvent has copy, drop, store {
+        game: address
+    }
+
+    public struct GameOverEvent has copy, drop, store {
+        game: address
+    }
+
+    public(package) fun assertVersion(game: &mut GameBoard){
+        assert!(game.version == CURRENT_GAME_VERSION, 1);
     }
 
     public fun getBoard(game: &mut GameBoard): vector<vector<u64>>{
@@ -25,6 +46,14 @@ module find_four::find_four_game {
 
     public fun getNonce(game: &mut GameBoard): u64 {
         game.nonce
+    }
+
+    public fun isGameOver(game: &mut GameBoard): bool {
+        game.is_game_over
+    }
+
+    public fun winningHandled(game: &mut GameBoard): bool {
+        game.winningHandled
     }
 
     public fun incrementNonce(game: &mut GameBoard) {
@@ -36,26 +65,6 @@ module find_four::find_four_game {
         addy
     }
 
-    public fun change_nth_element(mut v: vector<u64>, n: u64, new_value: u64) {
-        // Get a mutable reference to the nth element
-        let elem_ref = vector::borrow_mut(&mut v, n);
-        // Assign the new value to the nth element
-        *elem_ref = new_value;
-    }
-
-    public fun print_board(game: &mut GameBoard) {
-        // debug::print(&game.board);
-        // needs to be printed upside down
-        let mut row = 5;
-        while (row >= 0) {
-            debug::print(&game.board[row]);
-            if (row == 0){
-                break
-            };
-            row = row - 1;
-        }
-    }
-
     // Function for a human player to make a move
     public(package) fun player_move(game: &mut GameBoard, column: u64, ctx: &mut TxContext) {
         assert!(!game.is_game_over, 0);
@@ -65,11 +74,16 @@ module find_four::find_four_game {
 
     public(package) fun ai_move(game: &mut GameBoard, column: u64) {
         assert!(!game.is_game_over, 0);
+        assert!((game.current_player == P2));
         drop_disc(game, column);
     }
 
     public fun check_for_win_in_tests(game: &mut GameBoard, player: u64): bool{
         check_for_win(&game.board, player)
+    }
+
+    public(package) fun handleWinning(game: &mut GameBoard){
+        game.winningHandled = true;
     }
 
     // Helper function to create an empty board
@@ -90,7 +104,7 @@ module find_four::find_four_game {
     }
 
     // Initialize a new game
-    public(package) fun initialize_game(p2: address, gameType: u64, ctx: &mut TxContext) : address {
+    public(package) fun initialize_game(p2: address, gameType: u64, points1: u64, pointsObjAddy1: address, ctx: &mut TxContext) : address {
         let uid = object::new(ctx);
         let game_addy = object::uid_to_address(&uid);
         let game = GameBoard {
@@ -101,11 +115,23 @@ module find_four::find_four_game {
             p1: ctx.sender(),
             p2: p2,
             gameType: gameType,
-            nonce: 0
+            nonce: 0,
+            version: CURRENT_GAME_VERSION,
+            winner: 0,
+            winningHandled: false,
+            pointsObjAddy1: pointsObjAddy1,
+            points1: points1,
+            pointsObjAddy2: @0xFFFFF,
+            points2: 0
         };
         transfer::share_object(game);
         game_addy
     } 
+
+    public(package) fun setPlayer2PointsStuff(game: &mut GameBoard, points: u64, pointsObjAddy: address) {
+        game.points2 = points;
+        game.pointsObjAddy2 = pointsObjAddy;
+    }
 
         // Drop a disc into a column
     public(package) fun drop_disc(game: &mut GameBoard, column: u64) {
@@ -115,10 +141,13 @@ module find_four::find_four_game {
         while (row < 6) {
             if (game.board[row][column] == EMPTY) {
                 change_element(&mut game.board, row, column, game.current_player);
-                // change_nth_element(game.board[row], column, game.current_player);
                 debug::print(&b"jsj");
                 if (check_for_win(&game.board, game.current_player)) {
                     game.is_game_over = true;
+                    game.winner = game.current_player;
+                    let event = GameOverEvent {game: getGameId(game)};
+                    event::emit(event);
+                    // The rest handled in handleWinning() called in multi_player, same tx
                 };
                 if (game.current_player == P1){
                     game.current_player = P2;
@@ -130,6 +159,17 @@ module find_four::find_four_game {
             row = row + 1;
         };
         // abort!(1); // Column is full
+    }
+
+    public fun timerWentOff(game: &mut GameBoard){
+        game.is_game_over = true;
+        if (game.current_player == 2){
+            game.winner = 1;
+        } else {
+            game.winner = 2;
+        };
+        let event = TimerRanOutEvent {game: getGameId(game)};
+        event::emit(event);
     }
 
     public fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
@@ -182,6 +222,7 @@ module find_four::find_four_game {
         col = 0;
         row = 0;
         while (row < (rows - 3)) {
+            col = 0;
             while (col < (cols - 3)) {
                 if (board[row][col] == player &&
                    board[row + 1][col + 1] == player &&
@@ -198,6 +239,7 @@ module find_four::find_four_game {
         row = 3;
         // Check diagonal win (top-left to bottom-right)
         while (row < rows) {
+            col = 0;
             while (col < (cols - 3)) {
                 if (board[row][col] == player &&
                    board[row - 1][col + 1] == player &&

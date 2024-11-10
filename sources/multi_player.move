@@ -1,7 +1,8 @@
 module find_four::multi_player {
 
     use sui::event;
-    use find_four::find_four_game::{initialize_game, GameBoard, player_move};
+    use find_four::find_four_game::{initialize_game, GameBoard, player_move, setPlayer2PointsStuff};
+    use find_four::profile_and_rank::{PointsObj};
 
     // Event to notify a successful pairing
     public struct PairingEvent has copy, drop, store {
@@ -40,24 +41,25 @@ module find_four::multi_player {
         player_move(game, column, ctx);
     }
 
+    public fun second_player_make_first_move(game: &mut GameBoard, points: u64, pointsObjAddy: address,  column: u64, ctx: &mut TxContext) {
+        setPlayer2PointsStuff(game, points, pointsObjAddy);
+        player_move(game, column, ctx);
+    }
+
     // Function to attempt pairing users and/or create a new multiplayer game
-    public fun attempt_pairing(list: &mut WaitingList, ctx: &mut TxContext) {
+    public fun attempt_pairing(list: &mut WaitingList, pointsObjAddy: address, points: u64, ctx: &mut TxContext) {
         let list_len = vector::length(&list.users);
         // list.tmp = 7;
         //Check if there is at least one user waiting
         if (list_len > 0) {
             // Pair the incoming user with the first user in the queue
             let existing_user = vector::remove(&mut list.users, 0); // Remove the first user (FIFO order)
-            let gameId = initialize_game(existing_user, 2, ctx);
+            let gameId = initialize_game(existing_user, 2, points, pointsObjAddy, ctx);
             let pair_event = PairingEvent { p1: ctx.sender(), p2: existing_user, game: gameId };
             event::emit(pair_event);
-
-            // Here, you can add logic to store or further process the `new_pair` object
         } else {
             // No existing users, add current user to the waiting list
             add_user_to_list(list, ctx.sender());
-            // let pair_event = PairingEvent { p1: ctx.sender(), p2: ctx.sender(), game: ctx.sender() };
-            // event::emit(pair_event);
         }
     }
 
