@@ -14,8 +14,8 @@ module find_four::single_player {
         nonce: u64
     }
 
-    public fun start_single_player_game(ctx: &mut TxContext){
-        let gameId = initialize_game(AI_addy, 1, 0, @0xFFFFF, ctx);
+    public fun start_single_player_game(pointsObjAddy: address, points: u64, ctx: &mut TxContext){
+        let gameId = initialize_game(AI_addy, 1, points, pointsObjAddy, ctx);
         let game_event = SinglePlayerGameStartedEvent { game: gameId };
         event::emit(game_event);
     }

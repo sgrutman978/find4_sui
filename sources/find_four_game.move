@@ -128,7 +128,8 @@ module find_four::find_four_game {
         game_addy
     } 
 
-    public(package) fun setPlayer2PointsStuff(game: &mut GameBoard, points: u64, pointsObjAddy: address) {
+    public fun setPlayer2PointsStuff(game: &mut GameBoard, points: u64, pointsObjAddy: address) {
+        assert!(game.getNonce() == 1, 1);
         game.points2 = points;
         game.pointsObjAddy2 = pointsObjAddy;
     }

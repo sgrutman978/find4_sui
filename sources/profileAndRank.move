@@ -9,10 +9,11 @@ module find_four::profile_and_rank {
     public struct Profile has key, store {
         id: UID,
         username: String,
-        profilePicUrl: String,
+        profilePicAddy: address,
         pointsObj: address,
         version: u64,
-        currentGame: address
+        currentGame: address,
+        owner: address
     }
 
     public struct PointsObj has key, store {
@@ -60,7 +61,7 @@ module find_four::profile_and_rank {
         profile.pointsObj
     }
 
-    public fun create_profile(username: String, profilePicUrl: String, ctx: &mut TxContext): Profile {
+    public fun create_profile(username: String, profilePicAddy: address, ctx: &mut TxContext) {
         let uid = object::new(ctx);
         let pointsObjAddy = object::uid_to_address(&uid);
         let myPointsObj = PointsObj {
@@ -71,12 +72,19 @@ module find_four::profile_and_rank {
         let profile = Profile {
             id: object::new(ctx),
             username: username,
-            profilePicUrl: profilePicUrl,
+            profilePicAddy: profilePicAddy,
             pointsObj: pointsObjAddy,
             version: 1,
-            currentGame: DummyObjAddy
+            currentGame: DummyObjAddy,
+            owner: ctx.sender()
         };
-        profile
+        transfer::public_transfer(profile, ctx.sender());
+    }
+
+    public fun edit_profile(profile: &mut Profile, username: String, profilePicAddy: address, ctx: &mut TxContext) {
+        assert!(profile.owner == ctx.sender(), 1);
+        profile.username = username;
+        profile.profilePicAddy = profilePicAddy;
     }
 
     public(package) fun updatePoints(game: &mut GameBoard, pointsObj1: &mut PointsObj, pointsObj2: &mut PointsObj) {
