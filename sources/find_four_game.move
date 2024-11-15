@@ -1,13 +1,16 @@
 module find_four::find_four_game {
     use std::debug;
     use sui::event;
-    use find_four::profile_and_rank::{PointsObj};
+    use find_four::profile_and_rank::{PointsObj, updatePoints, Profile};
+    use find_four::FFIO::{reward_winner, RewardPool};
     // use find_four::multiplayer::{}
 
     const EMPTY: u64 = 0;
     const P1: u64 = 1;
     const P2: u64 = 2;
     const CURRENT_GAME_VERSION: u64 = 1;
+
+    public struct FindFourAdminCap has key { id: UID }
 
     // Struct for representing the game board
     public struct GameBoard has key, store {
@@ -21,11 +24,8 @@ module find_four::find_four_game {
         nonce: u64,
         version: u64,
         winner: u64,
-        winningHandled: bool,
-        pointsObjAddy1: address,
-        pointsObjAddy2: address,
-        points1: u64,
-        points2: u64
+        profile1: address,
+        profile2: address
     }
 
     public struct TimerRanOutEvent has copy, drop, store {
@@ -36,31 +36,62 @@ module find_four::find_four_game {
         game: address
     }
 
-    public(package) fun assertVersion(game: &mut GameBoard){
+    fun init(ctx: &mut TxContext) {
+        transfer::transfer(FindFourAdminCap {
+            id: object::new(ctx)
+        }, ctx.sender());
+    }
+
+    public fun do_win_stuffs(game: &mut GameBoard, profile1: &mut Profile, pointsObj1: &mut PointsObj, pointsObj2: &mut PointsObj, pool: &mut RewardPool, ctx: &mut TxContext){
+        if(game.gameType == 1){
+            reward_winner(pool, profile1.getRewardAccount(), 1);
+        }else{
+            updatePoints(game.winner, pointsObj1, pointsObj2, ctx);
+        }
+    }
+
+    // public fun setPlayer2PointsStuff(game: &mut GameBoard, pointsObjAddy: address) {
+    //     assert!(game.getNonce() == 1, 1);
+    //     // game.points2 = points;
+    //     game.pointsObjAddy2 = pointsObjAddy;
+    // }
+
+    public fun timerWentOff(_: &FindFourAdminCap, game: &mut GameBoard){
+        game.is_game_over = true;
+        if (game.current_player == 2){
+            game.winner = 1;
+        } else {
+            game.winner = 2;
+        };
+        let event = TimerRanOutEvent {game: getGameId(game)};
+        event::emit(event);
+    }
+
+    public(package) fun assertVersion(game: &GameBoard){
         assert!(game.version == CURRENT_GAME_VERSION, 1);
     }
 
-    public fun getBoard(game: &mut GameBoard): vector<vector<u64>>{
+    public(package) fun getBoard(game: &GameBoard): vector<vector<u64>>{
         game.board
     }
 
-    public fun getNonce(game: &mut GameBoard): u64 {
+    public(package) fun getNonce(game: &GameBoard): u64 {
         game.nonce
     }
 
-    public fun isGameOver(game: &mut GameBoard): bool {
+    public(package) fun isGameOver(game: &GameBoard): bool {
         game.is_game_over
     }
 
-    public fun winningHandled(game: &mut GameBoard): bool {
-        game.winningHandled
+    public(package) fun getWinner(game: &GameBoard): u64 {
+        game.winner
     }
 
-    public fun incrementNonce(game: &mut GameBoard) {
+    public(package) fun incrementNonce(game: &mut GameBoard) {
         game.nonce = game.nonce + 1;
     }
 
-    public fun getGameId(game: &mut GameBoard): address {
+    public(package) fun getGameId(game: &GameBoard): address {
         let addy = object::uid_to_address(&game.id);
         addy
     }
@@ -78,13 +109,13 @@ module find_four::find_four_game {
         drop_disc(game, column);
     }
 
-    public fun check_for_win_in_tests(game: &mut GameBoard, player: u64): bool{
+    public(package) fun check_for_win_in_tests(game: &mut GameBoard, player: u64): bool{
         check_for_win(&game.board, player)
     }
 
-    public(package) fun handleWinning(game: &mut GameBoard){
-        game.winningHandled = true;
-    }
+    // public(package) fun handleWinning(game: &mut GameBoard){
+    //     game.winningHandled = true;
+    // }
 
     // Helper function to create an empty board
     public(package) fun create_empty_board(): vector<vector<u64>> {
@@ -104,7 +135,7 @@ module find_four::find_four_game {
     }
 
     // Initialize a new game
-    public(package) fun initialize_game(p2: address, gameType: u64, points1: u64, pointsObjAddy1: address, ctx: &mut TxContext) : address {
+    public(package) fun initialize_game(p1: address, p2: address, gameType: u64, profile1: address, profile2: address, ctx: &mut TxContext) : address {
         let uid = object::new(ctx);
         let game_addy = object::uid_to_address(&uid);
         let game = GameBoard {
@@ -118,24 +149,16 @@ module find_four::find_four_game {
             nonce: 0,
             version: CURRENT_GAME_VERSION,
             winner: 0,
-            winningHandled: false,
-            pointsObjAddy1: pointsObjAddy1,
-            points1: points1,
-            pointsObjAddy2: @0xFFFFF,
-            points2: 0
+            // winningHandled: false,
+            profile1: profile1,
+            profile2: profile2
         };
         transfer::share_object(game);
         game_addy
     } 
 
-    public fun setPlayer2PointsStuff(game: &mut GameBoard, points: u64, pointsObjAddy: address) {
-        assert!(game.getNonce() == 1, 1);
-        game.points2 = points;
-        game.pointsObjAddy2 = pointsObjAddy;
-    }
-
         // Drop a disc into a column
-    public(package) fun drop_disc(game: &mut GameBoard, column: u64) {
+    fun drop_disc(game: &mut GameBoard, column: u64) {
         assert!(column < 7, 0);
         debug::print(&b"jsjsjsj");
         let mut row = 0;
@@ -148,7 +171,7 @@ module find_four::find_four_game {
                     game.winner = game.current_player;
                     let event = GameOverEvent {game: getGameId(game)};
                     event::emit(event);
-                    // The rest handled in handleWinning() called in multi_player, same tx
+                    // The rest handled in handleWinning() called in multi_player, new tx
                 };
                 if (game.current_player == P1){
                     game.current_player = P2;
@@ -162,18 +185,7 @@ module find_four::find_four_game {
         // abort!(1); // Column is full
     }
 
-    public fun timerWentOff(game: &mut GameBoard){
-        game.is_game_over = true;
-        if (game.current_player == 2){
-            game.winner = 1;
-        } else {
-            game.winner = 2;
-        };
-        let event = TimerRanOutEvent {game: getGameId(game)};
-        event::emit(event);
-    }
-
-    public fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
+    fun change_element(matrix: &mut vector<vector<u64>>, i: u64, j: u64, new_value: u64) {
         // Borrow the inner vector at index `i` from the outer vector `matrix`
         let inner_vec = vector::borrow_mut(matrix, i);
         // Borrow the element at index `j` in the `inner_vec` and update it

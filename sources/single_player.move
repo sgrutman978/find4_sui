@@ -1,7 +1,8 @@
 module find_four::single_player {
 
-    use find_four::find_four_game::{GameBoard, incrementNonce, getNonce, initialize_game, getGameId, player_move, ai_move};
+    use find_four::find_four_game::{GameBoard, incrementNonce, getNonce, initialize_game, getGameId, player_move, ai_move, FindFourAdminCap};
     use sui::event;
+    // use find_four::profile_and_rank::{Profile};
 
     const AI_addy: address = @0x66696E64342E696F; // find4.io in hex
 
@@ -14,8 +15,8 @@ module find_four::single_player {
         nonce: u64
     }
 
-    public fun start_single_player_game(pointsObjAddy: address, points: u64, ctx: &mut TxContext){
-        let gameId = initialize_game(AI_addy, 1, points, pointsObjAddy, ctx);
+    public fun start_single_player_game(profile1: address, ctx: &mut TxContext){
+        let gameId = initialize_game(ctx.sender(), AI_addy, 1, profile1, AI_addy, ctx);
         let game_event = SinglePlayerGameStartedEvent { game: gameId };
         event::emit(game_event);
     }
@@ -29,7 +30,7 @@ module find_four::single_player {
     }
 
     //AI makes a move
-    public fun ai_make_move(game: &mut GameBoard, column: u64) {
+    public fun ai_make_move(_: &FindFourAdminCap, game: &mut GameBoard, column: u64) {
         ai_move(game, column);
         incrementNonce(game);
     }
