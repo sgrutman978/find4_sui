@@ -66,8 +66,9 @@ module find_four::multi_player {
         player_move(game, column, ctx);
     }
 
-    public fun add_to_list(addy: address, profileAddy: address, points: u64, nonce: u64){
-        let add_to_List_event = AddToListEvent { addy: addy, profileAddy: profileAddy, points: points, nonce: nonce };
+    public fun add_to_list(addy: address, profileAddy: address, points: u64, the_ffio_nonce: &mut FFIO_Nonce){
+        incrementNonce(the_ffio_nonce);
+        let add_to_List_event = AddToListEvent { addy: addy, profileAddy: profileAddy, points: points, nonce: the_ffio_nonce.nonce };
         event::emit(add_to_List_event);
     }
 
@@ -77,7 +78,7 @@ module find_four::multi_player {
     // }
 
     // Function to attempt pairing users and/or create a new multiplayer game
-    public fun attempt_pairing(_: &FindFourAdminCap, /*p1Index: u64, p2Index: u64, */p1: address, p2: address, profile1: address, profile2: address, ctx: &mut TxContext) {
+    public fun attempt_pairing(_: &FindFourAdminCap, /*p1Index: u64, p2Index: u64, */p1: address, p2: address/*, profile1: address, profile2: address*/, ctx: &mut TxContext) {
         // let list_len = vector::length(&list.users);
         // list.tmp = 7;
         //Check if there is at least one user waiting
@@ -85,7 +86,7 @@ module find_four::multi_player {
             // Pair the incoming user with the first user in the queue
             // vector::remove(&mut list.users, p1Index);
             // vector::remove(&mut list.users, p2Index); // Remove the first user (FIFO order)
-            let gameId = initialize_game(p1, p2, 2, profile1, profile2, ctx);
+            let gameId = initialize_game(p1, p2, 2, /*profile1, profile2,*/ ctx);
             let pair_event = PairingEvent { p1: p1, p2: p2, game: gameId };
             event::emit(pair_event);
         // } else {

@@ -8,7 +8,7 @@ module find_four::find_four_game {
     const EMPTY: u64 = 0;
     const P1: u64 = 1;
     const P2: u64 = 2;
-    const CURRENT_GAME_VERSION: u64 = 1;
+    // const CURRENT_GAME_VERSION: u64 = 1;
 
     public struct FindFourAdminCap has key { id: UID }
 
@@ -22,10 +22,9 @@ module find_four::find_four_game {
         p2: address,
         gameType: u64, // 1 = against AI (singleplayer), 2 = multiplayer
         nonce: u64,
-        version: u64,
         winner: u64,
-        profile1: address,
-        profile2: address
+        // profile1: address,
+        // profile2: address
     }
 
     public struct TimerRanOutEvent has copy, drop, store {
@@ -67,9 +66,9 @@ module find_four::find_four_game {
         event::emit(event);
     }
 
-    public(package) fun assertVersion(game: &GameBoard){
-        assert!(game.version == CURRENT_GAME_VERSION, 1);
-    }
+    // public(package) fun assertVersion(game: &GameBoard){
+    //     assert!(game.version == CURRENT_GAME_VERSION, 1);
+    // }
 
     public(package) fun getBoard(game: &GameBoard): vector<vector<u64>>{
         game.board
@@ -87,7 +86,7 @@ module find_four::find_four_game {
         game.winner
     }
 
-    public(package) fun incrementNonce(game: &mut GameBoard) {
+    public(package) fun incrementGameNonce(game: &mut GameBoard) {
         game.nonce = game.nonce + 1;
     }
 
@@ -135,7 +134,7 @@ module find_four::find_four_game {
     }
 
     // Initialize a new game
-    public(package) fun initialize_game(p1: address, p2: address, gameType: u64, profile1: address, profile2: address, ctx: &mut TxContext) : address {
+    public(package) fun initialize_game(p1: address, p2: address, gameType: u64/*, profile1: address, profile2: address*/, ctx: &mut TxContext) : address {
         let uid = object::new(ctx);
         let game_addy = object::uid_to_address(&uid);
         let game = GameBoard {
@@ -143,15 +142,14 @@ module find_four::find_four_game {
             board: create_empty_board(),
             current_player: P1,
             is_game_over: false,
-            p1: ctx.sender(),
+            p1: p1,
             p2: p2,
             gameType: gameType,
             nonce: 0,
-            version: CURRENT_GAME_VERSION,
             winner: 0,
             // winningHandled: false,
-            profile1: profile1,
-            profile2: profile2
+            // profile1: profile1,
+            // profile2: profile2
         };
         transfer::share_object(game);
         game_addy
