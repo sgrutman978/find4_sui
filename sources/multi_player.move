@@ -1,9 +1,9 @@
 module find_four::multi_player {
 
     use sui::event;
-    use find_four::find_four_game::{initialize_game, GameBoard, player_move, FindFourAdminCap, setWinHandled};
+    use find_four::find_four_game::{initialize_game, GameBoard, player_move, setWinHandled};
     use find_four::profile_and_rank::{Profile, PointsObj, updatePoints};
-    use find_four::FFIO::{RewardPool};
+    use find_four::FFIO::{FindFourAdminCap};
 
     // Event to notify a successful pairing
     public struct PairingEvent has copy, drop, store {

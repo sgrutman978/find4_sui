@@ -5,7 +5,7 @@ module find_four::profile_and_rank {
     // use find_four::find_four_game::{ GameBoard};
     // use sui::random::{Self, Random, RandomGenerator, create_for_testing};
     use 0x1::u64::{max, divide_and_round_up};
-    use find_four::FFIO::{create_reward_account, RewardAccount};
+    // use find_four::FFIO::{create_reward_account, RewardAccount};
 
     const DummyObjAddy: address = @0xFFFFF;
 
@@ -17,7 +17,7 @@ module find_four::profile_and_rank {
         version: u64,
         currentGame: address,
         owner: address,
-        rewardAccount: RewardAccount
+        // rewardAccount: RewardAccount
     }
 
     public struct PointsObj has key, store {
@@ -65,9 +65,9 @@ module find_four::profile_and_rank {
         profile.pointsObj
     }
 
-    public(package) fun getRewardAccount(profile: &mut Profile): &mut RewardAccount {
-        &mut profile.rewardAccount
-    }
+    // public(package) fun getRewardAccount(profile: &mut Profile): &mut RewardAccount {
+    //     &mut profile.rewardAccount
+    // }
 
     public fun create_profile(username: String, profilePicAddy: address, ctx: &mut TxContext) {
         let uid = object::new(ctx);
@@ -77,7 +77,7 @@ module find_four::profile_and_rank {
             points: 50
         };
         transfer::share_object(myPointsObj);
-        let reward_account = create_reward_account(ctx);
+        // let reward_account = create_reward_account(ctx);
         let profile = Profile {
             id: object::new(ctx),
             username: username,
@@ -86,7 +86,7 @@ module find_four::profile_and_rank {
             version: 1,
             currentGame: DummyObjAddy,
             owner: ctx.sender(),
-            rewardAccount: reward_account
+            // rewardAccount: reward_account
         };
         transfer::public_transfer(profile, ctx.sender());
     }

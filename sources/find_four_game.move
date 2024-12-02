@@ -2,15 +2,13 @@ module find_four::find_four_game {
     use std::debug;
     use sui::event;
     use find_four::profile_and_rank::{PointsObj, updatePoints, Profile};
-    use find_four::FFIO::{reward_winner, RewardPool};
+    use find_four::FFIO::{reward_winner, FindFourAdminCap};
     // use find_four::multiplayer::{}
 
     const EMPTY: u64 = 0;
     const P1: u64 = 1;
     const P2: u64 = 2;
     // const CURRENT_GAME_VERSION: u64 = 1;
-
-    public struct FindFourAdminCap has key { id: UID }
 
     // Struct for representing the game board
     public struct GameBoard has key, store {
@@ -36,11 +34,9 @@ module find_four::find_four_game {
         game: address
     }
 
-    fun init(ctx: &mut TxContext) {
-        transfer::transfer(FindFourAdminCap {
-            id: object::new(ctx)
-        }, ctx.sender());
-    }
+    // fun init(ctx: &mut TxContext) {
+      
+    // }
 
     // public fun setPlayer2PointsStuff(game: &mut GameBoard, pointsObjAddy: address) {
     //     assert!(game.getNonce() == 1, 1);
