@@ -23,6 +23,7 @@ module find_four::find_four_game {
         gameType: u64, // 1 = against AI (singleplayer), 2 = multiplayer
         nonce: u64,
         winner: u64,
+        winHandled: bool
         // profile1: address,
         // profile2: address
     }
@@ -39,14 +40,6 @@ module find_four::find_four_game {
         transfer::transfer(FindFourAdminCap {
             id: object::new(ctx)
         }, ctx.sender());
-    }
-
-    public fun do_win_stuffs(game: &mut GameBoard, profile1: &mut Profile, pointsObj1: &mut PointsObj, pointsObj2: &mut PointsObj, pool: &mut RewardPool, ctx: &mut TxContext){
-        if(game.gameType == 1){
-            reward_winner(pool, profile1.getRewardAccount(), 1);
-        }else{
-            updatePoints(game.winner, pointsObj1, pointsObj2, ctx);
-        }
     }
 
     // public fun setPlayer2PointsStuff(game: &mut GameBoard, pointsObjAddy: address) {
@@ -84,6 +77,18 @@ module find_four::find_four_game {
 
     public(package) fun getWinner(game: &GameBoard): u64 {
         game.winner
+    }
+
+    public(package) fun getWinHandled(game: &GameBoard): bool {
+        game.winHandled
+    }
+
+    public(package) fun setWinHandled(game: &mut GameBoard, val: bool) {
+        game.winHandled = val
+    }
+
+    public(package) fun getGameType(game: &GameBoard): u64 {
+        game.gameType
     }
 
     public(package) fun incrementGameNonce(game: &mut GameBoard) {
@@ -147,7 +152,7 @@ module find_four::find_four_game {
             gameType: gameType,
             nonce: 0,
             winner: 0,
-            // winningHandled: false,
+            winHandled: false,
             // profile1: profile1,
             // profile2: profile2
         };
@@ -167,8 +172,8 @@ module find_four::find_four_game {
                 if (check_for_win(&game.board, game.current_player)) {
                     game.is_game_over = true;
                     game.winner = game.current_player;
-                    let event = GameOverEvent {game: getGameId(game)};
-                    event::emit(event);
+                    // let event = GameOverEvent {game: getGameId(game)};
+                    // event::emit(event);
                     // The rest handled in handleWinning() called in multi_player, new tx
                 };
                 if (game.current_player == P1){

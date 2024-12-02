@@ -1,8 +1,9 @@
 module find_four::multi_player {
 
     use sui::event;
-    use find_four::find_four_game::{initialize_game, GameBoard, player_move, FindFourAdminCap};
-    use find_four::profile_and_rank::{Profile};
+    use find_four::find_four_game::{initialize_game, GameBoard, player_move, FindFourAdminCap, setWinHandled};
+    use find_four::profile_and_rank::{Profile, PointsObj, updatePoints};
+    use find_four::FFIO::{RewardPool};
 
     // Event to notify a successful pairing
     public struct PairingEvent has copy, drop, store {
@@ -70,6 +71,13 @@ module find_four::multi_player {
         incrementNonce(the_ffio_nonce);
         let add_to_List_event = AddToListEvent { addy: addy, profileAddy: profileAddy, points: points, nonce: the_ffio_nonce.nonce };
         event::emit(add_to_List_event);
+    }
+
+    public fun do_win_stuffs(game: &mut GameBoard, pointsObj1: &mut PointsObj, pointsObj2: &mut PointsObj, ctx: &mut TxContext){
+        if(!game.getWinHandled() && game.getGameType() == 2){
+            updatePoints(game.getWinner(), pointsObj1, pointsObj2, ctx);
+            setWinHandled(game, true);
+        }
     }
 
     // public fun second_player_make_first_move(game: &mut GameBoard, pointsObjAddy: address,  column: u64, ctx: &mut TxContext) {

@@ -111,35 +111,35 @@ module find_four::profile_and_rank {
 
     public(package) fun updatePoints(winner: u64, pointsObj1: &mut PointsObj, pointsObj2: &mut PointsObj, ctx: &mut TxContext) {
         // if (isGameOver(game) && !winningHandled(game)){
-        let po1 = copy pointsObj1.points;
-        let po2 = copy pointsObj2.points;
+        // let po1 = pointsObj1.points;
+        // let po2 = pointsObj2.points;
         // TODO randomize a bit
         // let rand = generate_random_range(create_for_testing(ctx), min, max, ctx)
         assert!(winner != 0, 1);
         // TODO - handle points logic and changing
         if (winner == 1){
-            if (po1 >= po2){
+            if (pointsObj1.points >= pointsObj2.points){
                 //expected
-                pointsObj1.points = po1 + 5; //better player won, small reward
-                pointsObj2.points = subtract_not_under_zero(po2, 5); //worse player lost, small loss
+                pointsObj1.points = pointsObj1.points + 5; //better player won, small reward
+                pointsObj2.points = subtract_not_under_zero(pointsObj2.points, 5); //worse player lost, small loss
             }else{
                 //not expected
-                let difference = subtract_not_under_zero(po1, po2);
+                let difference = subtract_not_under_zero(pointsObj1.points, pointsObj2.points);
                 let movement = max(divide_and_round_up(difference, 2), 25);
-                pointsObj1.points = subtract_not_under_zero(po1, movement); //better player lost, big loss
-                pointsObj2.points = po2 + movement; //worse player won, big reward
+                pointsObj1.points = subtract_not_under_zero(pointsObj1.points, movement); //better player lost, big loss
+                pointsObj2.points = pointsObj2.points + movement; //worse player won, big reward
             }
         }else{
-            if (po2 >= po1){
+            if (pointsObj2.points >= pointsObj1.points){
                 //expected
-                pointsObj2.points = po1 + 5; //better player won, small reward
-                pointsObj1.points = subtract_not_under_zero(po1, 5); //worse player lost, small loss
+                pointsObj2.points = pointsObj2.points + 5; //better player won, small reward
+                pointsObj1.points = subtract_not_under_zero(pointsObj1.points, 5); //worse player lost, small loss
             }else{
                 //not expected
-                let difference = subtract_not_under_zero(po2, po1);
+                let difference = subtract_not_under_zero(pointsObj2.points, pointsObj1.points);
                 let movement = max(divide_and_round_up(difference, 2), 25);
-                pointsObj2.points = subtract_not_under_zero(po2, movement); //better player lost, big loss
-                pointsObj1.points = po1 + movement; //worse player won, big reward
+                pointsObj2.points = subtract_not_under_zero(pointsObj2.points, movement); //better player lost, big loss
+                pointsObj1.points = pointsObj1.points + movement; //worse player won, big reward
             }
         }
     }

@@ -1,8 +1,9 @@
 module find_four::single_player {
 
-    use find_four::find_four_game::{GameBoard, incrementGameNonce, getNonce, initialize_game, getGameId, player_move, ai_move, FindFourAdminCap};
+    use find_four::find_four_game::{GameBoard, incrementGameNonce, getNonce, initialize_game, getGameId, player_move, ai_move, FindFourAdminCap, setWinHandled};
     use sui::event;
-    // use find_four::profile_and_rank::{Profile};
+    use find_four::profile_and_rank::{Profile};
+    use find_four::FFIO::{reward_winner, RewardPool};
 
     const AI_addy: address = @0x66696E64342E696F; // find4.io in hex
 
@@ -33,6 +34,13 @@ module find_four::single_player {
     public fun ai_make_move(_: &FindFourAdminCap, game: &mut GameBoard, column: u64) {
         ai_move(game, column);
         incrementGameNonce(game);
+    }
+
+    public fun do_win_stuffs(game: &mut GameBoard, profile1: &mut Profile, pool: &mut RewardPool, ctx: &mut TxContext){
+        if(!game.getWinHandled() && game.getGameType() == 1){
+            reward_winner(pool, profile1.getRewardAccount(), 1);
+            setWinHandled(game, true);
+        }
     }
 
 }
