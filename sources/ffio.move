@@ -1,27 +1,17 @@
 module find_four::FFIO {
 
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext}; 
-    use sui::transfer;
     use sui::vec_map::{Self, VecMap};
     use sui::math;
     use sui::clock::{Self, Clock};
     use sui::balance::{Self, Balance};
     use sui::sui::SUI;
-    use sui::coin::{Self, Coin, value};
+    use sui::coin::{Self, Coin};
     use sui::event;
     use sui::url::Url;
-    // use find_four::FFIO::{FFIO};
-    // use find_four::find_four_game::{FindFourAdminCap};
 
     public struct FFIO has drop {}
 
     /* ========== OBJECTS ========== */
-
-    // public struct RewardPool has key {
-    //     id: UID,
-    //     coins: vector<Coin<FFIO>>,  // A vector of coins that makes up the pool
-    // }
 
     public struct RewardState has key {
         id: UID,
@@ -89,16 +79,17 @@ module find_four::FFIO {
     const ENoStakedTokens: u64 = 106;
     const ENoPriorTokenStake: u64 = 107;
     // const REWARD_ALREADY_CLAIMED: u64 = 108; 
-    const INSUFFICIENT_POOL_BALANCE: u64 = 109; 
+    // const INSUFFICIENT_POOL_BALANCE: u64 = 109; 
+
+    const OneCoinNineDecimals: u64 = 1000000000;
+
 
     /* ========== CONSTRUCTOR ========== */
 
     fun init (witness: FFIO, ctx: &mut TxContext){
-
-          transfer::transfer(FindFourAdminCap {
+        transfer::transfer(FindFourAdminCap {
             id: object::new(ctx)
         }, ctx.sender());
-       
         transfer::share_object(RewardState{
             id: object::new(ctx),
             duration: 0,
@@ -106,7 +97,6 @@ module find_four::FFIO {
             updatedAt: 0,
             rewardRate: 0
         });
-
         transfer::share_object(UserState{
             id: object::new(ctx),
             rewardPerTokenStored: 0,
@@ -114,31 +104,14 @@ module find_four::FFIO {
             balanceOf: vec_map::empty<address, u64>(),
             rewards: vec_map::empty<address, u64>()
         });
-
-        // See FFIO's init to see staking rewards treasury filled
-
         transfer::transfer(FindFourAdminCap {id: object::new(ctx)}, tx_context::sender(ctx));
 
-
-
-
-
-
-
-
-        let (mut treasury, metadata) = coin::create_currency(witness, 6, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.find4.io/f4-42.png")), ctx);
-        // let trea = &mut treasury;
-        // mint_ffio(trea, 100, ctx.sender(), ctx);
-        let half_bil = 500000000;
-
-        // let rewards_coins = coin::mint<FFIO>(&mut treasury, 10*half_bil, ctx);
-        // let mut vec_rewards_coins = vector::empty<Coin<FFIO>>();
-        // vector::push_back(&mut vec_rewards_coins, rewards_coins);
-        // create_reward_pool(vec_rewards_coins, ctx);
-
+        let (mut treasury, metadata) = coin::create_currency(witness, 9, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.find4.io/f4-42.png")), ctx);
+        let half_bil = 500000000*OneCoinNineDecimals;
         let staking_rewards_coins = coin::mint<FFIO>(&mut treasury, 8*half_bil, ctx);
         let game_rewards_coins = coin::mint<FFIO>(&mut treasury, 10*half_bil, ctx);
         let presale_coins = coin::mint<FFIO>(&mut treasury, 10*half_bil, ctx);
+
         let mut treasury_obj = Treasury{
             id: object::new(ctx),
             rewardsTreasury: balance::zero<FFIO>(),
@@ -159,86 +132,26 @@ module find_four::FFIO {
         transfer::public_transfer(treasury, ctx.sender());
 
         let balance3 = coin::into_balance(presale_coins);
-        // balance::join(&mut treasury_obj.gameRewardsTreasury, balance3);
         let presale_state = PresaleState {
             id: object::new(ctx),
             token_supply: balance3,
-            price: 1000000, // 1 SUI per token if SUI has 9 decimals
+            price: OneCoinNineDecimals/100, // 0.01 SUI per token if SUI has 9 decimals
             tokens_sold: 0,
-            cap: 1000000000, // Example cap of 1,000 tokens if TOKEN has 9 decimals
+            cap: 10*half_bil, // Example cap of 1,000 tokens if TOKEN has 9 decimals
         };
         transfer::share_object(presale_state);
 
     }
 
-    //     fun create_reward_pool(coins: vector<Coin<find_four::FFIO::FFIO>>, ctx: &mut TxContext) {
-    //     let reward_pool = RewardPool {
-    //         id: object::new(ctx),
-    //         coins,  // The coins passed in are stored in the pool
-    //     };
-    //     transfer::share_object(reward_pool);
-    // }
-
-    // public fun total_pool_balance(pool: &mut RewardPool): u64 {
-    //     let mut total: u64 = 0;
-    //     let len = vector::length(&pool.coins);
-    //     let mut i = 0;
-    //     while (i < len) {
-    //         let coin = vector::borrow(&pool.coins, i);
-    //         total = total + value(coin);
-    //         i = i + 1;
-    //     };
-    //     total
-    // }
-
     /// Automatically adds a reward when a player wins a game, drawing from the reward pool
     public(package) fun reward_winner(
-        // pool: &mut RewardPool, 
         treasury: &mut Treasury,
         amount: u64,
         ctx: &mut TxContext
     ) {
-        // let total_balance = total_pool_balance(pool);
-        // assert!(total_balance >= amount, INSUFFICIENT_POOL_BALANCE);
-
-        // // Deduct the reward from the pool and transfer to player
-        // let mut remaining_amount = amount;
-        // let mut i = 0;
-        // while (remaining_amount > 0) {
-        //     let coinr = vector::borrow_mut(&mut pool.coins, i);
-        //     let coin_value = coinr.value();
-        //     if (coin_value <= remaining_amount) {
-        //         remaining_amount = remaining_amount - coin_value;
-        //         // Transfer full coin
-        //         let new_coin = coin::split(coinr, coin_value, ctx);
-        //         transfer::public_transfer(new_coin, ctx.sender());
-        //     } else {
-        //         let new_coin = coin::split(coinr, remaining_amount, ctx);
-        //         remaining_amount = 0;
-        //         // Replace original coin with remaining coin
-        //         transfer::public_transfer(new_coin, ctx.sender());
-        //     };
-        //     i = i + 1;
-        // };
-        
-
-        // Transfer the staked tokens to the user
         let withdrawalAmount = coin::take<FFIO>(&mut treasury.gameRewardsTreasury, amount, ctx);
         transfer::public_transfer(withdrawalAmount, ctx.sender());
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     /* ========== USER FUNCTIONS ========== */
@@ -247,12 +160,6 @@ module find_four::FFIO {
     * @notice Stake user specified amount of Sui Coins 
     * @dev This function allows the user to stake a user specified amount of Sui coins 
       and updates their balances and rewards.
-    * @param payment The Coin<FFIO> payment to be staked.
-    * @param userState The mutable UserState reference.
-    * @param rewardState The mutable RewardState reference.
-    * @param treasury The mutable Treasury reference.
-    * @param clock The Clock reference.
-    * @param ctx The mutable transaction context.
     */
     public entry fun stake (payment: Coin<FFIO>, userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
         let account = tx_context::sender(ctx);
@@ -281,12 +188,6 @@ module find_four::FFIO {
     /**
     * @notice Withdraw the user specified amount of staked Sui coins
     * @dev This function allows the user to withdraw a user specified amount of staked tokens and updates their balances and rewards.
-    * @param userState The mutable UserState reference.
-    * @param rewardState The mutable RewardState reference.
-    * @param treasury The mutable Treasury reference.
-    * @param amount The amount of tokens to be withdrawn.
-    * @param clock The Clock reference.
-    * @param ctx The mutable transaction context.
     */
     public entry fun withdraw(userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, amount: u64, clock: &Clock, ctx: &mut TxContext) {
         let account = tx_context::sender(ctx);
@@ -312,47 +213,32 @@ module find_four::FFIO {
     /**
     * @notice Claim the rewards for the user
     * @dev This function allows the user to claim their rewards and updates their balances and reward states.
-    * @param userState The mutable UserState reference.
-    * @param rewardState The mutable RewardState reference.
-    * @param treasury The mutable Treasury reference.
-    * @param clock The Clock reference.
-    * @param ctx The mutable transaction context.
     */
     public entry fun getReward(userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
-
         let account = tx_context::sender(ctx);
         let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
-
         // Check if the user has a prior token stake
         let userHasPriorStake = vec_map::contains(&userState.rewards, &account);
         assert!(userHasPriorStake, ENoPriorTokenStake);
-
         // Check if the user has rewards to claim
         let rewards_account_imut = vec_map::get(&mut userState.rewards, &account);
         assert!(*rewards_account_imut > 0, ENoRewardsToClaim);
-
         // Update user and reward state parameters 
         updateReward(totalStakedSupply, account, userState, rewardState, clock);
-
         // Update user's rewards mapping and transfer rewards
         let rewards_account = vec_map::get_mut(&mut userState.rewards, &account);
         let stakingRewards = coin::take<FFIO>(&mut treasury.rewardsTreasury, *rewards_account, ctx);
-        
         event::emit(RewardPaid{user:tx_context::sender(ctx), reward: *rewards_account});
-
         *rewards_account = 0;
         transfer::public_transfer(stakingRewards, tx_context::sender(ctx));
     }
+
 
     /* ========== ADMIN FUNCTIONS ========== */
 
     /**
     * @notice Set the duration of the reward period
     * @dev This function allows the admin to set the duration of the reward period
-    * @param _ The FindFourAdminCap reference.
-    * @param rewardState The mutable RewardState reference.
-    * @param duration The new duration of the reward period.
-    * @param clock The Clock reference.
     */
     public entry fun setRewardDuration(_: &FindFourAdminCap, rewardState: &mut RewardState, duration: u64, clock: &Clock) {
          // Ensure that the reward duration has expired
@@ -364,25 +250,15 @@ module find_four::FFIO {
     /**
     * @notice Set the amount and consequently the rate of the reward
     * @dev This function allows the admin to set the amount and as a result the rate of the reward, updates user and reward states
-    * @param _ The FindFourAdminCap reference.
-    * @param reward The reward amount to be added.
-    * @param userState The mutable UserState reference.
-    * @param rewardState The mutable RewardState reference.
-    * @param treasury The mutable Treasury reference.
-    * @param clock The Clock reference.
     */
     public entry fun setRewardAmount(_: &FindFourAdminCap, reward: Coin<FFIO>, userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock) {
-
         let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
         let amount = coin::value(&reward);
-
         // Update user and reward state parameters 
         updateReward(totalStakedSupply, @0x0, userState, rewardState, clock);
-
         // Add rewards to treasury
         let balance = coin::into_balance(reward);
         balance::join(&mut treasury.rewardsTreasury, balance);
-
         // Compute the reward rate
         if(clock::timestamp_ms(clock) >= rewardState.finishAt){
             rewardState.rewardRate = amount / rewardState.duration;
@@ -391,28 +267,21 @@ module find_four::FFIO {
             let remaining_reward = (rewardState.finishAt - clock::timestamp_ms(clock)) * rewardState.rewardRate;
             rewardState.rewardRate = (amount + remaining_reward) / rewardState.duration;
         };
-
         // Ensure that the reward rate has been computed correctly
         assert!(rewardState.rewardRate > 0, EZeroRewardRate);
         assert!(rewardState.rewardRate * rewardState.duration <= balance::value(&treasury.rewardsTreasury), ELowRewardsTreasuryBalance);
-
         // Update the Last Updated Time and Finish Time
         rewardState.finishAt = clock::timestamp_ms(clock) + rewardState.duration;
         rewardState.updatedAt = clock::timestamp_ms(clock);
-
         event::emit(RewardAdded{reward: amount});
     }
+
 
     /* ========== HELPER FUNCTIONS ========== */
 
     /**
     * @notice Update the reward for a specific user 
     * @dev This function calculates and updates the reward for a specific user based on the total staked supply and reward state parameters.
-    * @param totalStakedSupply The total staked supply.
-    * @param account The user account address.
-    * @param userState The mutable UserState reference.
-    * @param rewardState The mutable RewardState reference.
-    * @param clock The Clock reference.
     */
     fun updateReward(totalStakedSupply: u64, account: address, userState: &mut UserState, rewardState: &mut  RewardState, clock :&Clock){
         // Calculate rewardPerTokenStored
@@ -434,12 +303,6 @@ module find_four::FFIO {
     /**
     * @notice Calculate the rewards earned for a specific user
     * @dev This function calculates the rewards earned for a specific user based on the total staked supply and reward state parameters.
-    * @param totalStakedSupply The total staked supply.
-    * @param account The user account address.
-    * @param userState The immutable UserState reference.
-    * @param rewardState The immutable RewardState reference.
-    * @param clock The immutable Clock reference.
-    * @return The rewards earned for the user.
     */
     fun earned(totalStakedSupply: u64, account: address, userState: &UserState, rewardState: &RewardState, clock: &Clock): u64{
         // Typecast to u256 to avoid arithmetic overflow
@@ -455,11 +318,6 @@ module find_four::FFIO {
     /**
     * @notice Calculate the reward per token at time t
     * @dev This function calculates the reward per token at time t based on the total staked supply and reward state parameters.
-    * @param totalStakedSupply The total staked supply.
-    * @param userState The immutable UserState reference.
-    * @param rewardState The immutable RewardState reference.
-    * @param clock The immutable Clock reference.
-    * @return The reward per token.
     */
     fun rewardPerToken(totalStakedSupply: u64, userState: &UserState, rewardState: &RewardState, clock: &Clock): u64 {
         if (totalStakedSupply == 0) { 
@@ -471,30 +329,6 @@ module find_four::FFIO {
         let computedRewardPerToken = (userState.rewardPerTokenStored as u256) + ((rewardState.rewardRate as u256) * (lastTimeRewardApplicable - (rewardState.updatedAt as u256)) * token_decimals)/ (totalStakedSupply as u256);
         return (computedRewardPerToken as u64)
     }
-
-    // #[test_only]
-    // public fun init_for_testing(ctx: &mut TxContext) {
-    //     init(ctx);
-    // }
-
-    // #[test_only]
-    // public fun getRewardRate(rewardState: &RewardState):u64 {
-    //     rewardState.rewardRate
-    // }
-
-    // #[test_only]
-    // public fun getRewardBalance(treasury: &Treasury):u64 {
-    //     balance::value(&treasury.rewardsTreasury)
-    // }
-
-    // #[test_only] 
-    // public fun getUserRewardBalance(userState: &UserState, ctx: &mut TxContext): u64{
-    //     let account = tx_context::sender(ctx);
-    //     *vec_map::get(&userState.rewards, &account)
-    // }
-
-
-
 
 
 //////////////////////////// Presale ///////////////////////////////
@@ -514,29 +348,18 @@ module find_four::FFIO {
         // assert!(balance::value(coin::balance_mut(payment)) >= total_cost, 0); // Ensure enough payment
         // assert!(presale.tokens_sold + amount <= presale.cap, 1); // Ensure we don't exceed cap
         let total_cost = amount * presale.price;
+        let ffio_tokens_to_buy = amount*OneCoinNineDecimals;
         assert!(coin::value(&payment) >= total_cost, 0); // Ensure enough payment
-        assert!(presale.tokens_sold + amount <= presale.cap, 1); // Ensure we don't exceed cap
-
-
-        let tokens = coin::take<FFIO>(&mut presale.token_supply, amount, ctx);
-        // let paymentSui = coin::balance_mut(payment);
-
+        assert!(presale.tokens_sold + ffio_tokens_to_buy <= presale.cap, 1); // Ensure we don't exceed cap
+        let tokens = coin::take<FFIO>(&mut presale.token_supply, ffio_tokens_to_buy, ctx);
         // Update sold tokens count
-        presale.tokens_sold = presale.tokens_sold + amount;
-
-        // Burn the payment
-        // balance::decrease(coin::balance_mut(payment), total_cost);
-        // transfer::transfer(paymentSui, @0x8418bb05799666b73c4645aa15e4d1ccae824e1487c01a665f51767826d192b7);
-
-                // Split the payment coin into cost and remainder
+        presale.tokens_sold = presale.tokens_sold + ffio_tokens_to_buy;
+        // Split the payment coin into cost and remainder
         let cost = coin::split(&mut payment, total_cost, ctx);
-
         // Transfer cost to the presale organizer's address
         transfer::public_transfer(cost, @0x8418bb05799666b73c4645aa15e4d1ccae824e1487c01a665f51767826d192b7); // Replace with the address where you want SUI to go
-
         // Return any remainder to the buyer
         transfer::public_transfer(payment, tx_context::sender(ctx));
-
         // Transfer tokens to buyer
         transfer::public_transfer(tokens, ctx.sender());
     }
