@@ -7,6 +7,8 @@ module find_four::profile_and_rank {
     use 0x1::u64::{max, divide_and_round_up};
     // use find_four::FFIO::{create_reward_account, RewardAccount};
 
+    // const VERSION: u64 = 1;
+
     const DummyObjAddy: address = @0xFFFFF;
 
     public struct Profile has key, store {

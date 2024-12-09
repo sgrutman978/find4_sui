@@ -5,6 +5,8 @@ module find_four::multi_player {
     use find_four::profile_and_rank::{Profile, PointsObj, updatePoints};
     use find_four::FFIO::{FindFourAdminCap};
 
+    const VERSION: u64 = 1;
+
     // Event to notify a successful pairing
     public struct PairingEvent has copy, drop, store {
         p1: address,
@@ -21,7 +23,8 @@ module find_four::multi_player {
 
     public struct FFIO_Nonce has key {
         id: UID,
-        nonce: u64
+        nonce: u64,
+        version: u64
     }
 
     // Structure to hold waiting users
@@ -46,8 +49,17 @@ module find_four::multi_player {
     fun initialize_nonce_tracker(ctx: &mut TxContext): FFIO_Nonce {
         FFIO_Nonce {
             id: object::new(ctx),
-            nonce: 0
+            nonce: 0,
+            version: VERSION
         }
+    }
+
+    fun check_version_Nonce(nonce: &FFIO_Nonce){
+        assert!(nonce.version == VERSION, 1);
+    }
+
+    public entry fun update_version(_: &FindFourAdminCap, nonce: &mut FFIO_Nonce) {
+        nonce.version = VERSION;
     }
 
     // Initializes the waiting list
@@ -60,6 +72,7 @@ module find_four::multi_player {
     // }
 
     public(package) fun incrementNonce(the_ffio_nonce: &mut FFIO_Nonce) {
+        check_version_Nonce(the_ffio_nonce);
         the_ffio_nonce.nonce = the_ffio_nonce.nonce + 1;
     }
 
@@ -68,6 +81,7 @@ module find_four::multi_player {
     }
 
     public fun add_to_list(addy: address, profileAddy: address, points: u64, the_ffio_nonce: &mut FFIO_Nonce){
+        check_version_Nonce(the_ffio_nonce);
         incrementNonce(the_ffio_nonce);
         let add_to_List_event = AddToListEvent { addy: addy, profileAddy: profileAddy, points: points, nonce: the_ffio_nonce.nonce };
         event::emit(add_to_List_event);

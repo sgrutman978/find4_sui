@@ -11,6 +11,8 @@ module find_four::FFIO {
 
     public struct FFIO has drop {}
 
+    const VERSION: u64 = 1;
+
     /* ========== OBJECTS ========== */
 
     public struct RewardState has key {
@@ -19,6 +21,7 @@ module find_four::FFIO {
         finishAt: u64, // Timestamp of when the rewards finish
         updatedAt: u64, // Minimum of last updated time and reward finish time
         rewardRate: u64, // Reward to be paid out per second: determined by the duration & amount of rewards
+        version: u64
     }
 
     public struct UserState has key {
@@ -27,13 +30,15 @@ module find_four::FFIO {
         userRewardPerTokenPaid: VecMap<address, u64>, // Mapping that keeps track of users' rewardPerTokenStored
         balanceOf: VecMap<address, u64>, // Mapping that keeps track of users' staked amount 
         rewards: VecMap<address, u64>, // Mapping that keeps track of users' rewards to be claimed
+        version: u64
     }
 
     public struct Treasury has key {
         id: UID,
         rewardsTreasury: Balance<FFIO>, // Staking rewards held in the treasury
         stakedCoinsTreasury: Balance<FFIO>, // Staked Sui coins held in the treasury
-        gameRewardsTreasury: Balance<FFIO>
+        gameRewardsTreasury: Balance<FFIO>,
+        version: u64
     }
 
     public struct FindFourAdminCap has key { id: UID }
@@ -95,14 +100,16 @@ module find_four::FFIO {
             duration: 0,
             finishAt: 0,
             updatedAt: 0,
-            rewardRate: 0
+            rewardRate: 0,
+            version: VERSION
         });
         transfer::share_object(UserState{
             id: object::new(ctx),
             rewardPerTokenStored: 0,
             userRewardPerTokenPaid: vec_map::empty<address, u64>(),
             balanceOf: vec_map::empty<address, u64>(),
-            rewards: vec_map::empty<address, u64>()
+            rewards: vec_map::empty<address, u64>(),
+            version: VERSION
         });
         transfer::transfer(FindFourAdminCap {id: object::new(ctx)}, tx_context::sender(ctx));
 
@@ -116,7 +123,8 @@ module find_four::FFIO {
             id: object::new(ctx),
             rewardsTreasury: balance::zero<FFIO>(),
             stakedCoinsTreasury: balance::zero<FFIO>(),
-            gameRewardsTreasury: balance::zero<FFIO>()};
+            gameRewardsTreasury: balance::zero<FFIO>(),
+            version: VERSION};
         let balance1 = coin::into_balance(staking_rewards_coins);
         balance::join(&mut treasury_obj.rewardsTreasury, balance1);
         let balance2 = coin::into_balance(game_rewards_coins);
@@ -138,9 +146,25 @@ module find_four::FFIO {
             price: OneCoinNineDecimals/100, // 0.01 SUI per token if SUI has 9 decimals
             tokens_sold: 0,
             cap: 10*half_bil, // Example cap of 1,000 tokens if TOKEN has 9 decimals
+            version: VERSION
         };
         transfer::share_object(presale_state);
+    }
 
+    public(package) fun check_version_Treasury(treasury: &Treasury){
+        assert!(treasury.version == VERSION, 1);
+    }
+
+    public(package) fun check_version_RewardState(rewardState: &RewardState){
+        assert!(rewardState.version == VERSION, 1);
+    }
+
+    public(package) fun check_version_UserState(userState: &UserState){
+        assert!(userState.version == VERSION, 1);
+    }
+
+    public(package) fun check_version_PresaleState(presaleState: &PresaleState){
+        assert!(presaleState.version == VERSION, 1);
     }
 
     /// Automatically adds a reward when a player wins a game, drawing from the reward pool
@@ -149,6 +173,7 @@ module find_four::FFIO {
         amount: u64,
         ctx: &mut TxContext
     ) {
+        check_version_Treasury(treasury);
         let withdrawalAmount = coin::take<FFIO>(&mut treasury.gameRewardsTreasury, amount, ctx);
         transfer::public_transfer(withdrawalAmount, ctx.sender());
     }
@@ -162,6 +187,9 @@ module find_four::FFIO {
       and updates their balances and rewards.
     */
     public entry fun stake (payment: Coin<FFIO>, userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
+        check_version_Treasury(treasury);
         let account = tx_context::sender(ctx);
         let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
         let amount = coin::value(&payment);
@@ -190,6 +218,9 @@ module find_four::FFIO {
     * @dev This function allows the user to withdraw a user specified amount of staked tokens and updates their balances and rewards.
     */
     public entry fun withdraw(userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, amount: u64, clock: &Clock, ctx: &mut TxContext) {
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
+        check_version_Treasury(treasury);
         let account = tx_context::sender(ctx);
         let balanceOf_account_imut = vec_map::get(&mut userState.balanceOf, &account);
         let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
@@ -215,6 +246,9 @@ module find_four::FFIO {
     * @dev This function allows the user to claim their rewards and updates their balances and reward states.
     */
     public entry fun getReward(userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
+        check_version_Treasury(treasury);
         let account = tx_context::sender(ctx);
         let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
         // Check if the user has a prior token stake
@@ -241,10 +275,18 @@ module find_four::FFIO {
     * @dev This function allows the admin to set the duration of the reward period
     */
     public entry fun setRewardDuration(_: &FindFourAdminCap, rewardState: &mut RewardState, duration: u64, clock: &Clock) {
-         // Ensure that the reward duration has expired
+         check_version_RewardState(rewardState);
+        // Ensure that the reward duration has expired
         assert!(rewardState.finishAt < clock::timestamp_ms(clock), ERewardDurationNotExpired);
         rewardState.duration = duration;
         event::emit(RewardDurationUpdated{newDuration: duration});
+    }
+
+    public entry fun update_version(_: &FindFourAdminCap, userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, presaleState: &mut PresaleState) {
+        userState.version = VERSION;
+        rewardState.version = VERSION;
+        treasury.version = VERSION;
+        presaleState.version = VERSION;
     }
 
     /**
@@ -252,6 +294,9 @@ module find_four::FFIO {
     * @dev This function allows the admin to set the amount and as a result the rate of the reward, updates user and reward states
     */
     public entry fun setRewardAmount(_: &FindFourAdminCap, reward: Coin<FFIO>, userState: &mut UserState, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock) {
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
+        check_version_Treasury(treasury);
         let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
         let amount = coin::value(&reward);
         // Update user and reward state parameters 
@@ -284,6 +329,8 @@ module find_four::FFIO {
     * @dev This function calculates and updates the reward for a specific user based on the total staked supply and reward state parameters.
     */
     fun updateReward(totalStakedSupply: u64, account: address, userState: &mut UserState, rewardState: &mut  RewardState, clock :&Clock){
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
         // Calculate rewardPerTokenStored
         userState.rewardPerTokenStored = rewardPerToken(totalStakedSupply, userState, rewardState, clock);
         // Update the Last Updated Time
@@ -305,6 +352,8 @@ module find_four::FFIO {
     * @dev This function calculates the rewards earned for a specific user based on the total staked supply and reward state parameters.
     */
     fun earned(totalStakedSupply: u64, account: address, userState: &UserState, rewardState: &RewardState, clock: &Clock): u64{
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
         // Typecast to u256 to avoid arithmetic overflow
         let balanceOf_account = (*vec_map::get(&userState.balanceOf, &account) as u256);
         let userRewardPerTokenPaid_account = (*vec_map::get(&userState.userRewardPerTokenPaid, &account) as u256);
@@ -320,6 +369,8 @@ module find_four::FFIO {
     * @dev This function calculates the reward per token at time t based on the total staked supply and reward state parameters.
     */
     fun rewardPerToken(totalStakedSupply: u64, userState: &UserState, rewardState: &RewardState, clock: &Clock): u64 {
+        check_version_UserState(userState);
+        check_version_RewardState(rewardState);
         if (totalStakedSupply == 0) { 
             return userState.rewardPerTokenStored
         };
@@ -340,10 +391,12 @@ module find_four::FFIO {
         price: u64, // Price in SUI per token
         tokens_sold: u64,
         cap: u64,  // Maximum number of tokens for sale
+        version: u64
     }
 
     // Function to buy tokens during presale
     public entry fun buy_token(presale: &mut PresaleState, mut payment: Coin<SUI>, amount: u64, ctx: &mut TxContext) {
+        check_version_PresaleState(presale);
         // let total_cost = amount * presale.price;
         // assert!(balance::value(coin::balance_mut(payment)) >= total_cost, 0); // Ensure enough payment
         // assert!(presale.tokens_sold + amount <= presale.cap, 1); // Ensure we don't exceed cap

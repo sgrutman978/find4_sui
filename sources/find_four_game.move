@@ -5,6 +5,8 @@ module find_four::find_four_game {
     use find_four::FFIO::{reward_winner, FindFourAdminCap};
     // use find_four::multiplayer::{}
 
+    const VERSION: u64 = 1;
+
     const EMPTY: u64 = 0;
     const P1: u64 = 1;
     const P2: u64 = 2;
@@ -21,9 +23,18 @@ module find_four::find_four_game {
         gameType: u64, // 1 = against AI (singleplayer), 2 = multiplayer
         nonce: u64,
         winner: u64,
-        winHandled: bool
+        winHandled: bool,
         // profile1: address,
-        // profile2: address
+        // profile2: address,
+        version: u64
+    }
+
+    fun check_version_GameBoard(gameboard: &GameBoard){
+        assert!(gameboard.version == VERSION, 1);
+    }
+
+    public entry fun update_version(_: &FindFourAdminCap, game: &mut GameBoard) {
+        game.version = VERSION;
     }
 
     public struct TimerRanOutEvent has copy, drop, store {
@@ -45,6 +56,7 @@ module find_four::find_four_game {
     // }
 
     public fun timerWentOff(_: &FindFourAdminCap, game: &mut GameBoard){
+        check_version_GameBoard(game);
         game.is_game_over = true;
         if (game.current_player == 2){
             game.winner = 1;
@@ -60,56 +72,68 @@ module find_four::find_four_game {
     // }
 
     public(package) fun getBoard(game: &GameBoard): vector<vector<u64>>{
+        check_version_GameBoard(game);
         game.board
     }
 
     public(package) fun getNonce(game: &GameBoard): u64 {
+        check_version_GameBoard(game);
         game.nonce
     }
 
     public(package) fun isGameOver(game: &GameBoard): bool {
+        check_version_GameBoard(game);
         game.is_game_over
     }
 
     public(package) fun getWinner(game: &GameBoard): u64 {
+        check_version_GameBoard(game);
         game.winner
     }
 
     public(package) fun getWinHandled(game: &GameBoard): bool {
+        check_version_GameBoard(game);
         game.winHandled
     }
 
     public(package) fun setWinHandled(game: &mut GameBoard, val: bool) {
+        check_version_GameBoard(game);
         game.winHandled = val
     }
 
     public(package) fun getGameType(game: &GameBoard): u64 {
+        check_version_GameBoard(game);
         game.gameType
     }
 
     public(package) fun incrementGameNonce(game: &mut GameBoard) {
+        check_version_GameBoard(game);
         game.nonce = game.nonce + 1;
     }
 
     public(package) fun getGameId(game: &GameBoard): address {
+        check_version_GameBoard(game);
         let addy = object::uid_to_address(&game.id);
         addy
     }
 
     // Function for a human player to make a move
     public(package) fun player_move(game: &mut GameBoard, column: u64, ctx: &mut TxContext) {
+        check_version_GameBoard(game);
         assert!(!game.is_game_over, 0);
         assert!((game.current_player == P1 && ctx.sender() == game.p1) || (game.current_player == P2 && ctx.sender() == game.p2), 1);
         drop_disc(game, column);
     }
 
     public(package) fun ai_move(game: &mut GameBoard, column: u64) {
+        check_version_GameBoard(game);
         assert!(!game.is_game_over, 0);
         assert!((game.current_player == P2));
         drop_disc(game, column);
     }
 
     public(package) fun check_for_win_in_tests(game: &mut GameBoard, player: u64): bool{
+        check_version_GameBoard(game);
         check_for_win(&game.board, player)
     }
 
@@ -151,6 +175,7 @@ module find_four::find_four_game {
             winHandled: false,
             // profile1: profile1,
             // profile2: profile2
+            version: VERSION
         };
         transfer::share_object(game);
         game_addy
@@ -158,6 +183,7 @@ module find_four::find_four_game {
 
         // Drop a disc into a column
     fun drop_disc(game: &mut GameBoard, column: u64) {
+        check_version_GameBoard(game);
         assert!(column < 7, 0);
         debug::print(&b"jsjsjsj");
         let mut row = 0;
