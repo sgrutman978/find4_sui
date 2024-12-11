@@ -1,8 +1,8 @@
 module find_four::multi_player {
 
     use sui::event;
-    use find_four::find_four_game::{initialize_game, GameBoard, player_move, setWinHandled};
-    use find_four::profile_and_rank::{Profile, PointsObj, updatePoints};
+    use find_four::find_four_game::{initialize_game, GameBoard, player_move, setWinHandled, getP1, getP2};
+    use find_four::profile_and_rank::{update_both_trophies_after_win, ProfileTable};
     use find_four::FFIO::{FindFourAdminCap};
 
     const VERSION: u64 = 1;
@@ -16,9 +16,8 @@ module find_four::multi_player {
 
     public struct AddToListEvent has copy, drop, store {
         addy: address,
-        profileAddy: address,
-        points: u64,
-        nonce: u64
+        nonce: u64,
+        points: u64
     }
 
     public struct FFIO_Nonce has key {
@@ -80,16 +79,16 @@ module find_four::multi_player {
         player_move(game, column, ctx);
     }
 
-    public fun add_to_list(addy: address, profileAddy: address, points: u64, the_ffio_nonce: &mut FFIO_Nonce){
+    public fun add_to_list2(addy: address, points: u64, the_ffio_nonce: &mut FFIO_Nonce){
         check_version_Nonce(the_ffio_nonce);
         incrementNonce(the_ffio_nonce);
-        let add_to_List_event = AddToListEvent { addy: addy, profileAddy: profileAddy, points: points, nonce: the_ffio_nonce.nonce };
+        let add_to_List_event = AddToListEvent { addy: addy, points: points, nonce: the_ffio_nonce.nonce };
         event::emit(add_to_List_event);
     }
 
-    public fun do_win_stuffs(game: &mut GameBoard, pointsObj1: &mut PointsObj, pointsObj2: &mut PointsObj, ctx: &mut TxContext){
+    public fun do_win_stuffs(game: &mut GameBoard, profileTable: &mut ProfileTable, ctx: &mut TxContext){
         if(!game.getWinHandled() && game.getGameType() == 2){
-            updatePoints(game.getWinner(), pointsObj1, pointsObj2, ctx);
+            update_both_trophies_after_win(profileTable, game.getWinner(), game.getP1(), game.getP2(), ctx);
             setWinHandled(game, true);
         }
     }
@@ -116,5 +115,11 @@ module find_four::multi_player {
         //     add_user_to_list(list, ctx.sender());
         // }
     }
+
+
+
+
+
+    public fun add_to_list(addy: address, profileAddy: address, points: u64, the_ffio_nonce: &mut FFIO_Nonce){}
 
 }

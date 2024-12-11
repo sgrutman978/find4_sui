@@ -1,7 +1,7 @@
 module find_four::find_four_game {
     use std::debug;
     use sui::event;
-    use find_four::profile_and_rank::{PointsObj, updatePoints, Profile};
+    // use find_four::profile_and_rank::{PointsObj, updatePoints, Profile};
     use find_four::FFIO::{reward_winner, FindFourAdminCap};
     // use find_four::multiplayer::{}
 
@@ -89,6 +89,16 @@ module find_four::find_four_game {
     public(package) fun getWinner(game: &GameBoard): u64 {
         check_version_GameBoard(game);
         game.winner
+    }
+
+    public(package) fun getP1(game: &GameBoard): address {
+        check_version_GameBoard(game);
+        game.p1
+    }
+
+    public(package) fun getP2(game: &GameBoard): address {
+        check_version_GameBoard(game);
+        game.p2
     }
 
     public(package) fun getWinHandled(game: &GameBoard): bool {

@@ -151,19 +151,19 @@ module find_four::FFIO {
         transfer::share_object(presale_state);
     }
 
-    public(package) fun check_version_Treasury(treasury: &Treasury){
+    fun check_version_Treasury(treasury: &Treasury){
         assert!(treasury.version == VERSION, 1);
     }
 
-    public(package) fun check_version_RewardState(rewardState: &RewardState){
+    fun check_version_RewardState(rewardState: &RewardState){
         assert!(rewardState.version == VERSION, 1);
     }
 
-    public(package) fun check_version_UserState(userState: &UserState){
+    fun check_version_UserState(userState: &UserState){
         assert!(userState.version == VERSION, 1);
     }
 
-    public(package) fun check_version_PresaleState(presaleState: &PresaleState){
+    fun check_version_PresaleState(presaleState: &PresaleState){
         assert!(presaleState.version == VERSION, 1);
     }
 
