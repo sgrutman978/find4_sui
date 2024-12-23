@@ -59,22 +59,6 @@ module find_four::FFIO {
         transfer::transfer(FindFourAdminCap {
             id: object::new(ctx)
         }, ctx.sender());
-        // transfer::share_object(RewardState{
-        //     id: object::new(ctx),
-        //     duration: 0,
-        //     finishAt: 0,
-        //     updatedAt: 0,
-        //     rewardRate: 0,
-        //     version: VERSION
-        // });
-        // transfer::share_object(UserState2{
-        //     id: object::new(ctx),
-        //     rewardPerTokenStored: 0,
-        //     userRewardPerTokenPaid: table::new<address, u64>(ctx),
-        //     balanceOf: table::new<address, u64>(ctx),
-        //     rewards: table::new<address, u64>(ctx),
-        //     version: VERSION
-        // });
         transfer::transfer(FindFourAdminCap {id: object::new(ctx)}, tx_context::sender(ctx));
         let (mut treasury, metadata) = coin::create_currency(witness, 9, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.find4.io/f4-42.png")), ctx);
         let half_bil = 500000000*OneCoinNineDecimals;
@@ -152,9 +136,6 @@ module find_four::FFIO {
     // Function to buy tokens during presale
     public entry fun buy_token(presale: &mut PresaleState, mut payment: Coin<SUI>, amount: u64, ctx: &mut TxContext) {
         check_version_PresaleState(presale);
-        // let total_cost = amount * presale.price;
-        // assert!(balance::value(coin::balance_mut(payment)) >= total_cost, 0); // Ensure enough payment
-        // assert!(presale.tokens_sold + amount <= presale.cap, 1); // Ensure we don't exceed cap
         let total_cost = amount * presale.price;
         let ffio_tokens_to_buy = amount*OneCoinNineDecimals;
         assert!(coin::value(&payment) >= total_cost, 0); // Ensure enough payment
@@ -214,18 +195,10 @@ module find_four::FFIO {
     }
 
     public entry fun migrate(_: &FindFourAdminCap, ctx: &mut TxContext){
-        // transfer::share_object(UserState2{
-        //     id: object::new(ctx),
-        //     rewardPerTokenStored: 0,
-        //     userRewardPerTokenPaid: table::new<address, u64>(ctx),
-        //     balanceOf: table::new<address, u64>(ctx),
-        //     rewards: table::new<address, u64>(ctx),
-        //     version: VERSION
-        // });
         let staking_pool = StakingPool {
             id: object::new(ctx),
             total_staked: balance::zero(),
-            reward_rate: 1000, // Example rate, adjust as needed
+            reward_rate: 1000,
             last_updated_time: 0,
             version: VERSION
         };
@@ -242,9 +215,6 @@ module find_four::FFIO {
 
     // Stake function
     public entry fun stake_new_ffio(staking_pool: &mut StakingPool, coin: Coin<FFIO>, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
-        // let staker = sender(ctx);
-
-        // update_reward(staking_pool, clock);
         check_version_StakingPool(staking_pool);
         let stake_object = StakeObject {
             id: object::new(ctx),
@@ -253,37 +223,19 @@ module find_four::FFIO {
             start_epoch: getCurrentEpoch(clock), // Convert to seconds
             reward_rate: staking_pool.reward_rate
         };
-
-        // staking_pool.total_staked = staking_pool.total_staked + amount;
         let balance = coin::into_balance(coin);
         balance::join(&mut treasury.stakedCoinsTreasury, balance);
         transfer::transfer(stake_object, ctx.sender());
-        // coin::destroy_zero(coin); // Ensure no leftover coins
     }
 
     // Function to unstake
     public entry fun unstake_ffio(staking_pool: &mut StakingPool, treasury: &mut Treasury, stake_object: &mut StakeObject, clock: &Clock, ctx: &mut TxContext) {
-        // update_reward_rate(staking_pool, clock);
         check_version_StakingPool(staking_pool);
         claim_rewards(staking_pool, treasury, stake_object, clock, ctx);
         let unstake_coin = coin::take<FFIO>(&mut treasury.stakedCoinsTreasury, stake_object.amount, ctx);
         transfer::public_transfer(unstake_coin, sender(ctx));
         stake_object.amount = 0;
-        // staking_pool.total_staked = staking_pool.total_staked - amount;
-        // object::delete(stake);
     }
-
-    // Update reward rate for the pool
-    // fun update_reward_rate(staking_pool: &mut StakingPool, clock: &Clock) {
-        // let current_time = clock::timestamp_ms(clock) / 1000;
-        // let time_passed = current_time - staking_pool.last_updated_time;
-
-        // if (staking_pool.total_staked > 0 && time_passed > 0) {
-        //     let reward_increment = staking_pool.reward_rate * time_passed / staking_pool.total_staked;
-        //     staking_pool.reward_per_token_stored = staking_pool.reward_per_token_stored + reward_increment;
-        // }
-        // staking_pool.last_updated_time = current_time;
-    // }
 
     fun getCurrentEpoch(clock: &Clock): u64{
         (clock::timestamp_ms(clock) / 1000)
@@ -308,24 +260,11 @@ module find_four::FFIO {
         transfer::public_transfer(reward_coin, sender(ctx));
     }
 
-    fun update_reward_rate(staking_pool: &mut StakingPool, rate: u64, clock: &Clock) {
+    public fun update_reward_rate(_: &FindFourAdminCap, staking_pool: &mut StakingPool, rate: u64, clock: &Clock) {
         check_version_StakingPool(staking_pool);
         staking_pool.reward_rate = rate;
         staking_pool.last_updated_time = getCurrentEpoch(clock);
     }
-
-    // // View function to check rewards without transaction
-    // public fun check_rewards(staking_pool: &StakingPool, stake_object: &StakeObject, clock: &Clock, ctx: &mut TxContext): u64 {
-    //     let StakingPool { id, total_staked, reward_rate, last_updated_time  } = staking_pool;
-    //     let x = StakingPool {
-    //         id: object::new(ctx),
-    //         total_staked: *total_staked,
-    //     reward_rate: u64, // Rewards per second per token staked
-    //     last_updated_time: u64,
-    //     };
-    //     update_reward(&mut hypothetical_pool, clock);
-    //     calculate_rewards(&hypothetical_pool, stake_object.reward_per_token_stored, stake_object.amount) + stake_object.rewards_owed
-    // }
 
     public entry fun update_version3(_: &FindFourAdminCap, staking_pool: &mut StakingPool, treasury: &mut Treasury, presaleState: &mut PresaleState) {
         staking_pool.version = VERSION;
@@ -530,7 +469,6 @@ module find_four::FFIO {
         rewardRate: u64, // Reward to be paid out per second: determined by the duration & amount of rewards
         version: u64
     }
-
         public struct UserState2 has key {
         id: UID,
         rewardPerTokenStored: u64, // Sum of (reward rate * dt * 1^(token_decimal) / total staked supply) where dt is the time difference between current time and last updated time
@@ -618,11 +556,9 @@ module find_four::FFIO {
     fun check_version_RewardState(rewardState: &RewardState){
         assert!(rewardState.version == VERSION, 1);
     }
-
     fun check_version_UserState2(userState: &UserState2){
         assert!(userState.version == VERSION, 1);
     }
-
     /* ========== ERRORS ========== */
 
     const ERewardDurationNotExpired: u64 = 100;
@@ -636,214 +572,62 @@ module find_four::FFIO {
     const REWARD_ALREADY_CLAIMED: u64 = 108; 
     const INSUFFICIENT_POOL_BALANCE: u64 = 109; 
 
-  /**
-    * @notice Stake user specified amount of Sui Coins 
-    * @dev This function allows the user to stake a user specified amount of Sui coins 
-      and updates their balances and rewards.
-    */
     public entry fun stake2 (payment: Coin<FFIO>, userState: &mut UserState2, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        check_version_Treasury(treasury);
-        let account = tx_context::sender(ctx);
-        let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
-        let amount = coin::value(&payment);
-        // Initialize user mappings if not already present
-        if(!table::contains(&userState.balanceOf, account)){
-            table::add(&mut userState.balanceOf, account, 0);
-            table::add(&mut userState.userRewardPerTokenPaid, account, 0);
-            table::add(&mut userState.rewards, account, 0);
-        };
-        // Update user and reward state parameters 
-        updateReward2(totalStakedSupply, account, userState, rewardState, clock);
-
-        // Transfer payment to treasury
+        assert!(0 == 1, 1);
         let balance = coin::into_balance(payment);
         balance::join(&mut treasury.stakedCoinsTreasury, balance);
-
-        // Update user's balances
-        let balanceOf_account = table::borrow_mut(&mut userState.balanceOf, account);
-        *balanceOf_account = *balanceOf_account + amount;
-
-        event::emit(Staked{user:tx_context::sender(ctx), amount});
+        debug::print(&b"old version");
     }
-
-    /**
-    * @notice Withdraw the user specified amount of staked Sui coins
-    * @dev This function allows the user to withdraw a user specified amount of staked tokens and updates their balances and rewards.
-    */
     public entry fun withdraw2(userState: &mut UserState2, rewardState: &mut RewardState, treasury: &mut Treasury, amount: u64, clock: &Clock, ctx: &mut TxContext) {
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        check_version_Treasury(treasury);
-        let account = tx_context::sender(ctx);
-        let balanceOf_account_imut = table::borrow(&mut userState.balanceOf, account);
-        let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
-        // Check if the user has staked tokens
-        let userStakedTokensExist = table::contains(&userState.balanceOf, account);
-        assert!(userStakedTokensExist, ENoStakedTokens);
-         // Ensure the withdrawal amount is less than the staked balance and greater than zero
-        assert!(amount > 0, EZeroAmount);
-        assert!(amount <= *balanceOf_account_imut, ERequestedAmountExceedsStaked);
-        // Update user and reward state parameters 
-        updateReward2(totalStakedSupply, account, userState, rewardState, clock);
-        // Update user's balance
-        let balanceOf_account = table::borrow_mut(&mut userState.balanceOf, account);
-        *balanceOf_account = *balanceOf_account - amount;
-        // Transfer the staked tokens to the user
-        let withdrawalAmount = coin::take<FFIO>(&mut treasury.stakedCoinsTreasury, amount, ctx);
-        transfer::public_transfer(withdrawalAmount, tx_context::sender(ctx));
-        event::emit(Withdrawn{user:tx_context::sender(ctx), amount});
+        debug::print(&b"old version");
     }
-
-    /**
-    * @notice Claim the rewards for the user
-    * @dev This function allows the user to claim their rewards and updates their balances and reward states.
-    */
     public entry fun getReward2(userState: &mut UserState2, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        check_version_Treasury(treasury);
-        let account = tx_context::sender(ctx);
-        let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
-        // Check if the user has a prior token stake
-        let userHasPriorStake = table::contains(&userState.rewards, account);
-        assert!(userHasPriorStake, ENoPriorTokenStake);
-        // Check if the user has rewards to claim
-        let rewards_account_imut = table::borrow(&mut userState.rewards, account);
-        assert!(*rewards_account_imut > 0, ENoRewardsToClaim);
-        // Update user and reward state parameters 
-        updateReward2(totalStakedSupply, account, userState, rewardState, clock);
-        // Update user's rewards mapping and transfer rewards
-        let rewards_account = table::borrow_mut(&mut userState.rewards, account);
-        let stakingRewards = coin::take<FFIO>(&mut treasury.rewardsTreasury, *rewards_account, ctx);
-        event::emit(RewardPaid{user:tx_context::sender(ctx), reward: *rewards_account});
-        *rewards_account = 0;
-        transfer::public_transfer(stakingRewards, tx_context::sender(ctx));
+       debug::print(&b"old version");
     }
-
-
-    /* ========== ADMIN FUNCTIONS ========== */
-
-    /**
-    * @notice Set the duration of the reward period
-    * @dev This function allows the admin to set the duration of the reward period
-    */
     public entry fun setRewardDuration(_: &FindFourAdminCap, rewardState: &mut RewardState, duration: u64, clock: &Clock) {
-         check_version_RewardState(rewardState);
-        // Ensure that the reward duration has expired
-        assert!(rewardState.finishAt < clock::timestamp_ms(clock), ERewardDurationNotExpired);
-        rewardState.duration = duration;
-        event::emit(RewardDurationUpdated{newDuration: duration});
+        debug::print(&b"old version");
     }
-
-        /**
-    * @notice Set the amount and consequently the rate of the reward
-    * @dev This function allows the admin to set the amount and as a result the rate of the reward, updates user and reward states
-    */
     public entry fun setRewardAmount2(_: &FindFourAdminCap, reward: Coin<FFIO>, userState: &mut UserState2, rewardState: &mut RewardState, treasury: &mut Treasury, clock: &Clock) {
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        check_version_Treasury(treasury);
-        let totalStakedSupply = balance::value(&treasury.stakedCoinsTreasury);
-        let amount = coin::value(&reward);
-        // Update user and reward state parameters 
-        updateReward2(totalStakedSupply, @0x0, userState, rewardState, clock);
-        // Add rewards to treasury
+        assert!(0 == 1, 1);
         let balance = coin::into_balance(reward);
         balance::join(&mut treasury.rewardsTreasury, balance);
-        // Compute the reward rate
-        if(clock::timestamp_ms(clock) >= rewardState.finishAt){
-            rewardState.rewardRate = amount / rewardState.duration;
-        }
-        else{
-            let remaining_reward = (rewardState.finishAt - clock::timestamp_ms(clock)) * rewardState.rewardRate;
-            rewardState.rewardRate = (amount + remaining_reward) / rewardState.duration;
-        };
-        // Ensure that the reward rate has been computed correctly
-        assert!(rewardState.rewardRate > 0, EZeroRewardRate);
-        assert!(rewardState.rewardRate * rewardState.duration <= balance::value(&treasury.rewardsTreasury), ELowRewardsTreasuryBalance);
-        // Update the Last Updated Time and Finish Time
-        rewardState.finishAt = clock::timestamp_ms(clock) + rewardState.duration;
-        rewardState.updatedAt = clock::timestamp_ms(clock);
-        event::emit(RewardAdded{reward: amount});
+        debug::print(&b"old version");
     }
-
-
-    /* ========== HELPER FUNCTIONS ========== */
-
-    /**
-    * @notice Update the reward for a specific user 
-    * @dev This function calculates and updates the reward for a specific user based on the total staked supply and reward state parameters.
-    */
     fun updateReward2(totalStakedSupply: u64, account: address, userState: &mut UserState2, rewardState: &mut  RewardState, clock :&Clock){
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        // Calculate rewardPerTokenStored
-        userState.rewardPerTokenStored = rewardPerToken2(totalStakedSupply, userState, rewardState, clock);
-        // Update the Last Updated Time
-        rewardState.updatedAt = math::min(clock::timestamp_ms(clock), rewardState.finishAt); // lastTimeRewardApplicable
-        if (account != @0x0){
-            // Update the user's rewards earned
-            let new_reward_value = earned2(totalStakedSupply, account, userState, rewardState, clock);
-            let rewards_account = table::borrow_mut(&mut userState.rewards, account);
-            *rewards_account = new_reward_value;
-
-            // Update the user's userRewardPerTokenPaid
-            let userRewardPerTokenPaid_account = table::borrow_mut(&mut userState.userRewardPerTokenPaid, account);
-            *userRewardPerTokenPaid_account = userState.rewardPerTokenStored;
-        }
+        debug::print(&b"old version");
     }
-
-    /**
-    * @notice Calculate the rewards earned for a specific user
-    * @dev This function calculates the rewards earned for a specific user based on the total staked supply and reward state parameters.
-    */
     fun earned2(totalStakedSupply: u64, account: address, userState: &UserState2, rewardState: &RewardState, clock: &Clock): u64{
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        // Typecast to u256 to avoid arithmetic overflow
-        let balanceOf_account = (*table::borrow(&userState.balanceOf, account) as u256);
-        let userRewardPerTokenPaid_account = (*table::borrow(&userState.userRewardPerTokenPaid, account) as u256);
-        let rewards_account = (*table::borrow(&userState.rewards, account) as u256);
-        let token_decimals = (math::pow(10, 9) as u256);
-        // Update the rewards earned
-        let rewards_earned  = ((balanceOf_account * ((rewardPerToken2(totalStakedSupply, userState, rewardState, clock) as u256) - userRewardPerTokenPaid_account)) / token_decimals) + rewards_account;
-        return (rewards_earned as u64)
+        debug::print(&b"old version");
+        0
     }
-
-    /**
-    * @notice Calculate the reward per token at time t
-    * @dev This function calculates the reward per token at time t based on the total staked supply and reward state parameters.
-    */
     fun rewardPerToken2(totalStakedSupply: u64, userState: &UserState2, rewardState: &RewardState, clock: &Clock): u64 {
-        check_version_UserState2(userState);
-        check_version_RewardState(rewardState);
-        if (totalStakedSupply == 0) { 
-            return userState.rewardPerTokenStored
-        };
-        let token_decimals = (math::pow(10, 9) as u256);
-        let lastTimeRewardApplicable = (math::min(clock::timestamp_ms(clock), rewardState.finishAt) as u256);
-        // Typecast to u256 to avoid arithmetic overflow
-        let computedRewardPerToken = (userState.rewardPerTokenStored as u256) + ((rewardState.rewardRate as u256) * (lastTimeRewardApplicable - (rewardState.updatedAt as u256)) * token_decimals)/ (totalStakedSupply as u256);
-        return (computedRewardPerToken as u64)
+        debug::print(&b"old version");
+        0
     }
-
-        public entry fun update_version2(_: &FindFourAdminCap, userState: &mut UserState2, rewardState: &mut RewardState, treasury: &mut Treasury, presaleState: &mut PresaleState) {
-        userState.version = VERSION;
-        rewardState.version = VERSION;
-        treasury.version = VERSION;
-        presaleState.version = VERSION;
+    public entry fun update_version2(_: &FindFourAdminCap, userState: &mut UserState2, rewardState: &mut RewardState, treasury: &mut Treasury, presaleState: &mut PresaleState) {
+        debug::print(&b"old version");
     }
-
-        /// Distributes a fixed amount of tokens to multiple addresses from the sender's balance.
-    public entry fun distribute_tokens<T>(
-        coin: &mut Coin<T>,
-        addresses: vector<address>,
-        amount_per_address: u64,
-        ctx: &mut TxContext
-    ) {
-
-    }
+    public entry fun distribute_tokens<T>(coin: &mut Coin<T>, addresses: vector<address>, amount_per_address: u64, ctx: &mut TxContext) { }
+       
+        // fun init (witness: FFIO, ctx: &mut TxContext){
+        // transfer::transfer(FindFourAdminCap {
+        //     id: object::new(ctx)
+        // }, ctx.sender());
+        // transfer::share_object(RewardState{
+        //     id: object::new(ctx),
+        //     duration: 0,
+        //     finishAt: 0,
+        //     updatedAt: 0,
+        //     rewardRate: 0,
+        //     version: VERSION
+        // });
+        // transfer::share_object(UserState2{
+        //     id: object::new(ctx),
+        //     rewardPerTokenStored: 0,
+        //     userRewardPerTokenPaid: table::new<address, u64>(ctx),
+        //     balanceOf: table::new<address, u64>(ctx),
+        //     rewards: table::new<address, u64>(ctx),
+        //     version: VERSION
+        // });
 
 }
