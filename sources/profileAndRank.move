@@ -5,7 +5,7 @@ module find_four::profile_and_rank {
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use std::string::{String};
-    use 0x1::u64::{max, divide_and_round_up};
+    use 0x1::u64::{max, min, divide_and_round_up};
     use find_four::FFIO::{ FindFourAdminCap};
 
     const VERSION: u64 = 1;
@@ -58,6 +58,11 @@ module find_four::profile_and_rank {
     public(package) fun view_profile(table: &ProfileTable, owner: address): &Profile {
         assert!(table::contains(&table.profiles, owner), 0);
         table::borrow(&table.profiles, owner)
+    }
+
+    public(package) fun get_trophies(table: &ProfileTable, owner: address): u64 {
+        let prof = view_profile(table, owner);
+        prof.trophies
     }
 
     // Function to remove a profile (only callable by the profile owner)
@@ -218,7 +223,7 @@ module find_four::profile_and_rank {
         if (winner == 1){
             let mut change: u64 = 5;
             if (points1 < points2){
-                change = max(divide_and_round_up((points2 - points1), 2), 25);
+                change = min(divide_and_round_up((points2 - points1), 2), 25);
             };
             update_trophies(table, change, true, p1, ctx);
             update_trophies(table, change, false, p2, ctx);
@@ -242,7 +247,7 @@ module find_four::profile_and_rank {
         }else{
             let mut change = 5;
             if (points2 < points1){
-                change = max(divide_and_round_up((points1 - points2), 2), 25);
+                change = min(divide_and_round_up((points1 - points2), 2), 25);
             };
             update_trophies(table, change, true, p2, ctx);
             update_trophies(table, change, false, p1, ctx);

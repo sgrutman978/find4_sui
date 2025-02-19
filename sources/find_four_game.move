@@ -4,12 +4,14 @@ module find_four::find_four_game {
     // use find_four::profile_and_rank::{PointsObj, updatePoints, Profile};
     use find_four::FFIO::{reward_winner, FindFourAdminCap};
     // use find_four::multiplayer::{}
+    use sui::table::{Self, Table};
 
     const VERSION: u64 = 1;
 
     const EMPTY: u64 = 0;
     const P1: u64 = 1;
     const P2: u64 = 2;
+    
     // const CURRENT_GAME_VERSION: u64 = 1;
 
     // Struct for representing the game board
@@ -21,12 +23,17 @@ module find_four::find_four_game {
         p1: address,
         p2: address,
         gameType: u64, // 1 = against AI (singleplayer), 2 = multiplayer
-        nonce: u64,
+        nonce: u64, // repurposed to keep track of last move
         winner: u64,
         winHandled: bool,
         // profile1: address,
         // profile2: address,
         version: u64
+    }
+
+    public struct GamesTracker has key, store {
+        id: UID,
+        games: Table<address, vector<address>>
     }
 
     fun check_version_GameBoard(gameboard: &GameBoard){
@@ -45,6 +52,14 @@ module find_four::find_four_game {
         game: address
     }
 
+    public entry fun migrate(_: &FindFourAdminCap, ctx: &mut TxContext){
+        let gamesTracker = GamesTracker {
+            id: object::new(ctx),
+            games: table::new<address, vector<address>>(ctx)
+        };
+        transfer::share_object(gamesTracker);
+    }
+
     // fun init(ctx: &mut TxContext) {
       
     // }
@@ -54,6 +69,14 @@ module find_four::find_four_game {
     //     // game.points2 = points;
     //     game.pointsObjAddy2 = pointsObjAddy;
     // }
+
+    public(package) fun addGameToTracker(playerAddy: address, gameId: address, gamesTracker: &mut GamesTracker){
+        if (!table::contains(&gamesTracker.games, playerAddy)) {
+            table::add(&mut gamesTracker.games, playerAddy, vector::empty());
+        };
+        let myGames = table::borrow_mut(&mut gamesTracker.games, playerAddy);
+        myGames.push_back(gameId);
+    }
 
     public fun timerWentOff(_: &FindFourAdminCap, game: &mut GameBoard){
         check_version_GameBoard(game);
@@ -116,9 +139,14 @@ module find_four::find_four_game {
         game.gameType
     }
 
-    public(package) fun incrementGameNonce(game: &mut GameBoard) {
+    public(package) fun recordLatestMoveCol(game: &mut GameBoard, col: u64) {
         check_version_GameBoard(game);
-        game.nonce = game.nonce + 1;
+        game.nonce = col;
+    }
+
+    public(package) fun incrementGameNnce(game: &mut GameBoard) {
+        // check_version_GameBoard(game);
+        // game.nonce = game.nonce + 1;
     }
 
     public(package) fun getGameId(game: &GameBoard): address {

@@ -44,7 +44,7 @@ module find_four::FFIO {
     // Struct to manage staking pool
     public struct StakingPool has key {
         id: UID,
-        total_staked: Balance<FFIO>,
+        total_staked: Balance<FFIO>, //NOT USED FOR ANYTHING EVER
         reward_rate: u64, // Rewards per second per token staked
         last_updated_time: u64,
         version: u64
@@ -60,7 +60,7 @@ module find_four::FFIO {
             id: object::new(ctx)
         }, ctx.sender());
         transfer::transfer(FindFourAdminCap {id: object::new(ctx)}, tx_context::sender(ctx));
-        let (mut treasury, metadata) = coin::create_currency(witness, 9, b"FFIO", b"Find4.io Coin", b"Play to earn!", option::some(create_url(b"https://www.find4.io/f4-42.png")), ctx);
+        let (mut treasury, metadata) = coin::create_currency(witness, 9, b"WJKL4", b"F", b"Play to earn!", option::some(create_url(b"https://www.find4.io/f4-42.png")), ctx);
         let half_bil = 500000000*OneCoinNineDecimals;
         let staking_rewards_coins = coin::mint<FFIO>(&mut treasury, 8*half_bil, ctx);
         let game_rewards_coins = coin::mint<FFIO>(&mut treasury, 10*half_bil, ctx);
@@ -198,7 +198,7 @@ module find_four::FFIO {
         let staking_pool = StakingPool {
             id: object::new(ctx),
             total_staked: balance::zero(),
-            reward_rate: 1000,
+            reward_rate: 10,
             last_updated_time: 0,
             version: VERSION
         };
@@ -208,19 +208,33 @@ module find_four::FFIO {
     public entry fun stake_existing_ffio(staking_pool: &mut StakingPool, coin: Coin<FFIO>, treasury: &mut Treasury, clock: &Clock, stake_object: StakeObject, ctx: &mut TxContext){
         check_version_StakingPool(staking_pool);
         claim_rewards(staking_pool, treasury, &stake_object, clock, ctx);
+        assert!(ctx.sender() != @0xCAFE, 1);
+        let amount = coin::value(&coin) + stake_object.amount;
+
+        // let balance = coin::into_balance(coin);
+        // balance::join(&mut treasury.stakedCoinsTreasury, balance);
+        let new_stake_object = StakeObject {
+            id: object::new(ctx),
+            // staker,
+            amount: amount,
+            start_epoch: getCurrentEpoch(clock), 
+            reward_rate: staking_pool.reward_rate
+        };
         let balance = coin::into_balance(coin);
         balance::join(&mut treasury.stakedCoinsTreasury, balance);
-        transfer::transfer(stake_object, ctx.sender());
+        transfer::transfer(new_stake_object, ctx.sender());
+        transfer::transfer(stake_object, @0xCAFE);
     }
 
     // Stake function
     public entry fun stake_new_ffio(staking_pool: &mut StakingPool, coin: Coin<FFIO>, treasury: &mut Treasury, clock: &Clock, ctx: &mut TxContext) {
         check_version_StakingPool(staking_pool);
+        assert!(ctx.sender() != @0xCAFE, 1);
         let stake_object = StakeObject {
             id: object::new(ctx),
             // staker,
             amount: coin::value(&coin),
-            start_epoch: getCurrentEpoch(clock), // Convert to seconds
+            start_epoch: getCurrentEpoch(clock), 
             reward_rate: staking_pool.reward_rate
         };
         let balance = coin::into_balance(coin);
@@ -230,6 +244,7 @@ module find_four::FFIO {
 
     // Function to unstake
     public entry fun unstake_ffio(staking_pool: &mut StakingPool, treasury: &mut Treasury, stake_object: &mut StakeObject, clock: &Clock, ctx: &mut TxContext) {
+        assert!(ctx.sender() != @0xCAFE, 1);
         check_version_StakingPool(staking_pool);
         claim_rewards(staking_pool, treasury, stake_object, clock, ctx);
         let unstake_coin = coin::take<FFIO>(&mut treasury.stakedCoinsTreasury, stake_object.amount, ctx);
@@ -238,26 +253,51 @@ module find_four::FFIO {
     }
 
     fun getCurrentEpoch(clock: &Clock): u64{
-        (clock::timestamp_ms(clock) / 1000)
+        (clock::timestamp_ms(clock) / 1000) // Converts to seconds
+    }
+
+    public(package) fun getStakedAmount(stakedObj: &StakeObject): u64{
+        stakedObj.amount
     }
 
     // Calculate rewards for a stake
     public fun calculate_rewards(staking_pool: &StakingPool, stake_object: &StakeObject, clock: &Clock): u64 {
         check_version_StakingPool(staking_pool);
         if (staking_pool.reward_rate >= stake_object.reward_rate) {
-            return staking_pool.reward_rate * (getCurrentEpoch(clock) - stake_object.start_epoch) * stake_object.amount;
+            return staking_pool.reward_rate * (getCurrentEpoch(clock) - stake_object.start_epoch) * (stake_object.amount / OneCoinNineDecimals);
         }else{
-            return stake_object.reward_rate * (getCurrentEpoch(clock) - stake_object.start_epoch) * stake_object.amount;
+            return stake_object.reward_rate * (getCurrentEpoch(clock) - stake_object.start_epoch) * (stake_object.amount / OneCoinNineDecimals);
         };
         0
     }
 
     // Claim rewards
     public fun claim_rewards(staking_pool: &mut StakingPool, treasury: &mut Treasury, stake_object: &StakeObject, clock: &Clock, ctx: &mut TxContext) {
+        assert!(ctx.sender() != @0xCAFE, 1);
         check_version_StakingPool(staking_pool);
         let reward_amount = calculate_rewards(staking_pool, stake_object, clock);
         let reward_coin = coin::take<FFIO>(&mut treasury.rewardsTreasury, reward_amount, ctx);
         transfer::public_transfer(reward_coin, sender(ctx));
+    }
+
+    // Claim rewards
+    public fun claim_rewards2(staking_pool: &mut StakingPool, treasury: &mut Treasury, stake_object: StakeObject, clock: &Clock, ctx: &mut TxContext) {
+        assert!(ctx.sender() != @0xCAFE, 1);
+        check_version_StakingPool(staking_pool);
+        let reward_amount = calculate_rewards(staking_pool, &stake_object, clock);
+        let reward_coin = coin::take<FFIO>(&mut treasury.rewardsTreasury, reward_amount, ctx);
+        transfer::public_transfer(reward_coin, sender(ctx));
+
+        let new_stake_object = StakeObject {
+            id: object::new(ctx),
+            // staker,
+            amount: stake_object.amount,
+            start_epoch: getCurrentEpoch(clock), 
+            reward_rate: staking_pool.reward_rate
+        };
+        transfer::transfer(new_stake_object, ctx.sender());
+        transfer::transfer(stake_object, @0xCAFE);
+        // stake_object.start_epoch = getCurrentEpoch(clock);
     }
 
     public fun update_reward_rate(_: &FindFourAdminCap, staking_pool: &mut StakingPool, rate: u64, clock: &Clock) {
@@ -460,7 +500,7 @@ module find_four::FFIO {
 
 
 
-
+// public fun claim_rewards(staking_pool: &mut StakingPool, treasury: &mut Treasury, stake_object: &StakeObject, clock: &Clock, ctx: &mut TxContext) {}
     public struct RewardState has key {
         id: UID,
         duration: u64, // Set by the Owner: Duration of rewards to be paid out (in seconds)
