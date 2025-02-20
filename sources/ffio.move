@@ -16,8 +16,6 @@ module find_four::FFIO {
     use sui::object::{Self, UID};
     use std::vector;
 
- 
-
     const VERSION: u64 = 1;
     const EInsufficientBalance: u64 = 0;
         const OneCoinNineDecimals: u64 = 1000000000;
